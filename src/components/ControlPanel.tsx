@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { RgbControl } from "@/components/RgbControl";
+import { ThermalControl } from "@/components/ThermalControl";
 import type { DeviceInfo } from "@/types";
 
 interface ControlPanelProps {
@@ -277,16 +279,10 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
       )}
 
       {hasControl(device, "four_zoned_kb/") && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Keyboard RGB</CardTitle>
-            <CardDescription>
-              Four-zone RGB controls live under{" "}
-              <code className="text-xs">four_zoned_kb/</code> — UI coming next.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <RgbControl disabled={!controlsEnabled} />
       )}
+
+      <ThermalControl disabled={!controlsEnabled} />
     </div>
   );
 }

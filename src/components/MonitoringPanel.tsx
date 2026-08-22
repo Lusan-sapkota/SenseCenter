@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Activity, Fan, Thermometer } from "lucide-react";
+import { Activity, Fan, Network, Thermometer, Zap } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
@@ -45,6 +45,12 @@ function Stat({
   );
 }
 
+function formatRate(bytesPerSec: number): string {
+  if (bytesPerSec < 1024) return `${bytesPerSec.toFixed(0)} B/s`;
+  if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+  return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+}
+
 export function MonitoringPanel({ snapshot, history, error }: MonitoringPanelProps) {
   const labels = [
     ...new Set(history.map((point) => String(point.label)).filter(Boolean)),
@@ -64,8 +70,12 @@ export function MonitoringPanel({ snapshot, history, error }: MonitoringPanelPro
     [],
   );
 
-  const primaryTemp = snapshot?.hwmon.find((r) => r.temp_c != null);
-  const primaryFan = snapshot?.hwmon.find((r) => r.fan_rpm != null);
+  const packageTemp = snapshot?.temps.find((r) => /package/i.test(r.label));
+  const vramPct =
+    snapshot?.gpu?.memory_used_mib != null && snapshot.gpu.memory_total_mib
+      ? Math.round((snapshot.gpu.memory_used_mib / snapshot.gpu.memory_total_mib) * 100)
+      : null;
+  const totalPowerW = snapshot?.power.reduce((sum, r) => sum + r.value, 0) ?? null;
 
   return (
     <div className="space-y-4">
@@ -79,39 +89,33 @@ export function MonitoringPanel({ snapshot, history, error }: MonitoringPanelPro
         <Stat
           icon={Thermometer}
           label="CPU temp"
-          value={
-            primaryTemp?.temp_c != null ? `${primaryTemp.temp_c.toFixed(1)}°C` : "—"
-          }
+          value={packageTemp ? `${packageTemp.value.toFixed(1)}°C` : "—"}
         />
         <Stat
           icon={Thermometer}
           label="GPU temp"
-          value={
-            snapshot?.gpu?.temp_c != null ? `${snapshot.gpu.temp_c}°C` : "—"
-          }
-        />
-        <Stat
-          icon={Fan}
-          label="Fan RPM"
-          value={
-            primaryFan?.fan_rpm != null ? `${primaryFan.fan_rpm}` : "—"
-          }
+          value={snapshot?.gpu?.temp_c != null ? `${snapshot.gpu.temp_c}°C` : "—"}
         />
         <Stat
           icon={Activity}
-          label="GPU util"
+          label="GPU util / VRAM"
           value={
             snapshot?.gpu?.utilization_pct != null
-              ? `${snapshot.gpu.utilization_pct}%`
+              ? `${snapshot.gpu.utilization_pct}%${vramPct != null ? ` · ${vramPct}% VRAM` : ""}`
               : "—"
           }
+        />
+        <Stat
+          icon={Zap}
+          label="Total power"
+          value={totalPowerW ? `${totalPowerW.toFixed(1)} W` : "—"}
         />
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Temperature history</CardTitle>
-          <CardDescription>Polling every 2 seconds from hwmon and NVML.</CardDescription>
+          <CardDescription>Package / composite sensors, polled every 2 seconds.</CardDescription>
         </CardHeader>
         <CardContent className="h-72">
           {chartData.length < 2 ? (
@@ -159,24 +163,110 @@ export function MonitoringPanel({ snapshot, history, error }: MonitoringPanelPro
         </CardContent>
       </Card>
 
-      {snapshot && snapshot.hwmon.length > 0 && (
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>hwmon sensors</CardTitle>
+            <div className="flex items-center gap-2">
+              <Fan className="size-4" />
+              <CardTitle>Fans</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
+            {snapshot && snapshot.fans.length > 0 ? (
+              <div className="divide-y divide-border/60">
+                {snapshot.fans.map((fan) => (
+                  <div
+                    key={`${fan.chip}-${fan.label}`}
+                    className="flex items-center justify-between py-2 text-sm"
+                  >
+                    <span className="font-medium">{fan.label}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {fan.value.toFixed(0)} RPM
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No fan sensors reported.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Zap className="size-4" />
+              <CardTitle>Power</CardTitle>
+            </div>
+            <CardDescription>CPU package power needs root — see DESIGN.md.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {snapshot && snapshot.power.length > 0 ? (
+              <div className="divide-y divide-border/60">
+                {snapshot.power.map((p) => (
+                  <div
+                    key={`${p.chip}-${p.label}`}
+                    className="flex items-center justify-between py-2 text-sm"
+                  >
+                    <span className="font-medium">{p.label}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {p.value.toFixed(1)} W
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No power sensors reported.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Network className="size-4" />
+            <CardTitle>Network</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {snapshot && snapshot.network.length > 0 ? (
             <div className="divide-y divide-border/60">
-              {snapshot.hwmon.map((reading) => (
+              {snapshot.network.map((net) => (
                 <div
-                  key={reading.label}
+                  key={net.interface}
                   className="flex items-center justify-between py-2 text-sm"
                 >
-                  <span className="font-medium">{reading.label}</span>
+                  <span className="font-medium">{net.interface}</span>
                   <span className="tabular-nums text-muted-foreground">
-                    {reading.temp_c != null && `${reading.temp_c.toFixed(1)}°C`}
-                    {reading.temp_c != null && reading.fan_rpm != null && " · "}
-                    {reading.fan_rpm != null && `${reading.fan_rpm} RPM`}
+                    ↓ {formatRate(net.rx_bytes_per_sec)} · ↑ {formatRate(net.tx_bytes_per_sec)}
                   </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Collecting samples…</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {snapshot && snapshot.temps.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>All sensors</CardTitle>
+            <CardDescription>Full hwmon readout — matches what KDE System Monitor reports.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-x-6 sm:grid-cols-2">
+              {snapshot.temps.map((t) => (
+                <div
+                  key={`${t.chip}-${t.label}`}
+                  className="flex items-center justify-between border-b border-border/60 py-1.5 text-sm"
+                >
+                  <span className="text-muted-foreground">
+                    {t.chip} · {t.label}
+                  </span>
+                  <span className="tabular-nums">{t.value.toFixed(1)}°C</span>
                 </div>
               ))}
             </div>

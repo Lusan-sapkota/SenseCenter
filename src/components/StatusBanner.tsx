@@ -1,13 +1,13 @@
 import {
   AlertCircle,
   CheckCircle2,
-  Cpu,
   RefreshCw,
   ShieldAlert,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LogoMark, Wordmark } from "@/components/Logo";
 import type { StartupStatus } from "@/types";
 
 interface StatusBannerProps {
@@ -33,8 +33,10 @@ export function StatusBanner({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Cpu className="size-5 text-primary" />
-            <h1 className="text-xl font-semibold tracking-tight">SenseCenter</h1>
+            <LogoMark size={28} />
+            <h1 className="text-xl font-semibold tracking-tight">
+              <Wordmark />
+            </h1>
             {status?.device && (
               <Badge variant="secondary">{status.device.product_name}</Badge>
             )}

@@ -17,18 +17,17 @@ export function useTelemetry(enabled: boolean) {
       setSnapshot(data);
       setError(null);
 
-      const now = Date.now();
-      const points: TelemetryPoint[] = data.hwmon
-        .filter((r) => r.temp_c != null)
+      const points: TelemetryPoint[] = data.temps
+        .filter((r) => /package|composite/i.test(r.label))
         .map((r) => ({
-          time: now,
-          label: r.label,
-          temp: r.temp_c as number,
+          time: 0,
+          label: `${r.chip} ${r.label}`,
+          temp: r.value,
         }));
 
       if (data.gpu?.temp_c != null) {
         points.push({
-          time: now,
+          time: 0,
           label: "GPU",
           temp: data.gpu.temp_c,
         });

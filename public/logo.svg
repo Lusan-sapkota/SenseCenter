@@ -1,0 +1,14 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="scGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1FCBB0" />
+      <stop offset="100%" stop-color="#7A63EE" />
+    </linearGradient>
+  </defs>
+  <polygon points="50,12 82.9,31 82.9,69 50,88 17.1,69 17.1,31"
+    fill="none" stroke="url(#scGrad)" stroke-width="5.5"
+    stroke-linejoin="round" stroke-linecap="round" />
+  <path d="M26,50 L36,50 L42,29 L48,69 L54,41 L60,50 L74,50"
+    fill="none" stroke="url(#scGrad)" stroke-width="5.5"
+    stroke-linejoin="round" stroke-linecap="round" />
+</svg>

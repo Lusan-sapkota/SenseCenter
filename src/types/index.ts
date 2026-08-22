@@ -12,12 +12,29 @@ export interface StartupStatus {
   in_linuwu_sense_group: boolean;
   device: DeviceInfo | null;
   fwupd_available: boolean;
+  lm_sensors_installed: boolean;
+  missing_dependencies: string[];
+  repo_url: string;
 }
 
-export interface HwmonReading {
+export interface FirmwareDevice {
+  id: string;
+  name: string;
+  vendor: string | null;
+  version: string | null;
+  update_available: boolean;
+}
+
+export interface SensorReading {
+  chip: string;
   label: string;
-  temp_c: number | null;
-  fan_rpm: number | null;
+  value: number;
+}
+
+export interface NetReading {
+  interface: string;
+  rx_bytes_per_sec: number;
+  tx_bytes_per_sec: number;
 }
 
 export interface GpuReading {
@@ -25,10 +42,14 @@ export interface GpuReading {
   utilization_pct: number | null;
   memory_used_mib: number | null;
   memory_total_mib: number | null;
+  power_w: number | null;
 }
 
 export interface TelemetrySnapshot {
-  hwmon: HwmonReading[];
+  temps: SensorReading[];
+  fans: SensorReading[];
+  power: SensorReading[];
+  network: NetReading[];
   gpu: GpuReading | null;
 }
 

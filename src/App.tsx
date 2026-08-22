@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { StatusBanner } from "@/components/StatusBanner";
 import { ControlPanel } from "@/components/ControlPanel";
 import { MonitoringPanel } from "@/components/MonitoringPanel";
 import { FirmwarePanel } from "@/components/FirmwarePanel";
+import { DependencyModal } from "@/components/DependencyModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStartupStatus } from "@/hooks/useStartupStatus";
 import { useTelemetry } from "@/hooks/useTelemetry";
@@ -13,6 +15,13 @@ function App() {
   );
   const { snapshot, history, error: telemetryError } = useTelemetry(true);
 
+  const [depModalOpen, setDepModalOpen] = useState(false);
+  useEffect(() => {
+    if (status && status.missing_dependencies.length > 0) {
+      setDepModalOpen(true);
+    }
+  }, [status]);
+
   const chartHistory = history.map((point) => ({
     time: point.time,
     label: point.label,
@@ -20,7 +29,7 @@ function App() {
   }));
 
   return (
-    <div className="dark min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-6">
         <StatusBanner
           status={status}
@@ -56,6 +65,13 @@ function App() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <DependencyModal
+        open={depModalOpen}
+        missing={status?.missing_dependencies ?? []}
+        repoUrl={status?.repo_url ?? "https://github.com/Lusan-sapkota/SenseCenter"}
+        onOpenChange={setDepModalOpen}
+      />
     </div>
   );
 }
