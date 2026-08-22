@@ -3,7 +3,7 @@ name = "sensecenter"
 version = "0.1.0"
 description = "Control and monitoring dashboard for Acer Predator/Nitro laptops on Linux"
 authors = ["lusan"]
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
