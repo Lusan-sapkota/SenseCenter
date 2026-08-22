@@ -1,6 +1,6 @@
 # SenseCenter
 
-Native control and monitoring dashboard for Acer Predator/Nitro laptops on Linux. Built on [linuwu-sense](https://github.com/0x7375646F/Linuwu-Sense) adds live telemetry and firmware updates that the existing GUI lacks.
+Native control and monitoring dashboard for Acer Predator/Nitro laptops on Linux. Built on [Strictly ](https://github.com/0x7375646F/Linuwu-Sense) adds live telemetry and firmware updates that the existing GUI lacks.
 
 **Stack:** Tauri 2 (Rust) + React + TypeScript
 

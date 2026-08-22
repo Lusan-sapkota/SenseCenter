@@ -1,50 +1,62 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { StatusBanner } from "@/components/StatusBanner";
+import { ControlPanel } from "@/components/ControlPanel";
+import { MonitoringPanel } from "@/components/MonitoringPanel";
+import { FirmwarePanel } from "@/components/FirmwarePanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useStartupStatus } from "@/hooks/useStartupStatus";
+import { useTelemetry } from "@/hooks/useTelemetry";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const { status, loading, error, refresh } = useStartupStatus();
+  const controlsEnabled = Boolean(
+    status?.module_loaded && status.in_linuwu_sense_group && status.device,
+  );
+  const { snapshot, history, error: telemetryError } = useTelemetry(true);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const chartHistory = history.map((point) => ({
+    time: point.time,
+    label: point.label,
+    temp: point.temp,
+  }));
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+    <div className="dark min-h-screen bg-background">
+      <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-6">
+        <StatusBanner
+          status={status}
+          loading={loading}
+          error={error}
+          onRefresh={() => void refresh()}
         />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+
+        <Tabs defaultValue="monitor" className="flex-1">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="monitor">Monitor</TabsTrigger>
+            <TabsTrigger value="controls">Controls</TabsTrigger>
+            <TabsTrigger value="firmware">Firmware</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="monitor" className="mt-4">
+            <MonitoringPanel
+              snapshot={snapshot}
+              history={chartHistory}
+              error={telemetryError}
+            />
+          </TabsContent>
+
+          <TabsContent value="controls" className="mt-4">
+            <ControlPanel
+              device={status?.device ?? null}
+              controlsEnabled={controlsEnabled}
+            />
+          </TabsContent>
+
+          <TabsContent value="firmware" className="mt-4">
+            <FirmwarePanel available={status?.fwupd_available ?? false} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
   );
 }
 
