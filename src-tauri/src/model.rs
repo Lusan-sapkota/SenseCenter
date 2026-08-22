@@ -4,6 +4,7 @@ use crate::error::{AppError, AppResult};
 
 const PREDATOR_SENSE: &str = "/sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/predator_sense";
 const NITRO_SENSE: &str = "/sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/nitro_sense";
+const FOUR_ZONED_KB: &str = "/sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/four_zoned_kb";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -85,7 +86,11 @@ pub fn detect_device() -> AppResult<DeviceInfo> {
         return Err(AppError::SysfsNotFound(sense_base_path.display().to_string()));
     }
 
-    let available_controls = probe_available_controls(&sense_base_path);
+    let mut available_controls = probe_available_controls(&sense_base_path);
+    if Path::new(FOUR_ZONED_KB).is_dir() {
+        available_controls.push("four_zoned_kb/".to_string());
+        available_controls.sort();
+    }
 
     Ok(DeviceInfo {
         product_name,

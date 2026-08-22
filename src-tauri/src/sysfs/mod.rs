@@ -25,7 +25,13 @@ pub fn write_file(path: &Path, value: &str) -> AppResult<()> {
 }
 
 pub fn control_path(base: &Path, name: &str) -> PathBuf {
-    base.join(name)
+    match name.strip_prefix("four_zoned_kb/") {
+        Some(rest) => base
+            .parent()
+            .map(|parent| parent.join("four_zoned_kb").join(rest))
+            .unwrap_or_else(|| base.join(name)),
+        None => base.join(name),
+    }
 }
 
 pub fn read_control(base: &Path, name: &str) -> AppResult<String> {

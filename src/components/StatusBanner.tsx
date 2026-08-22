@@ -1,6 +1,9 @@
+import { useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
+  Loader2,
+  Lock,
   RefreshCw,
   ShieldAlert,
 } from "lucide-react";
@@ -8,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LogoMark, Wordmark } from "@/components/Logo";
+import { tauriErrorMessage, unlockPrivileged } from "@/lib/api";
 import type { StartupStatus } from "@/types";
 
 interface StatusBannerProps {
@@ -28,6 +32,22 @@ export function StatusBanner({
     status.in_linuwu_sense_group &&
     status.device != null;
 
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockResult, setUnlockResult] = useState<string | null>(null);
+
+  const handleUnlock = async () => {
+    setUnlocking(true);
+    setUnlockResult(null);
+    try {
+      await unlockPrivileged();
+      setUnlockResult("Unlocked — CPU power, thermal profile, and radio toggles are now writable.");
+    } catch (err) {
+      setUnlockResult(tauriErrorMessage(err));
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-4">
@@ -45,16 +65,37 @@ export function StatusBanner({
             Hardware control and live monitoring for linuwu-sense
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          disabled={loading}
-        >
-          <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleUnlock()}
+            disabled={unlocking}
+          >
+            {unlocking ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Lock className="mr-2 size-4" />
+            )}
+            Unlock advanced features
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={loading}
+          >
+            <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
+
+      {unlockResult && (
+        <Alert>
+          <AlertDescription>{unlockResult}</AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">

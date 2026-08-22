@@ -79,6 +79,15 @@ pub async fn list_devices() -> AppResult<Vec<FirmwareDevice>> {
     Ok(devices)
 }
 
+pub async fn security_id() -> AppResult<String> {
+    let connection = Connection::system().await?;
+    let proxy = fwupd_proxy(&connection).await?;
+    proxy
+        .get_property::<String>("HostSecurityId")
+        .await
+        .map_err(AppError::Dbus)
+}
+
 pub async fn trigger_update(device_id: &str) -> AppResult<String> {
     let output = tokio::process::Command::new("fwupdmgr")
         .args(["update", device_id, "--assume-yes", "--no-reboot-check"])

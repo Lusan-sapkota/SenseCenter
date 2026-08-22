@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Download, Loader2, RefreshCw } from "lucide-react";
-import { listFirmwareDevices, tauriErrorMessage, triggerFirmwareUpdate } from "@/lib/api";
+import { CheckCircle2, Download, Loader2, RefreshCw, Shield } from "lucide-react";
+import {
+  getSecurityId,
+  listFirmwareDevices,
+  tauriErrorMessage,
+  triggerFirmwareUpdate,
+} from "@/lib/api";
 import {
   Card,
   CardContent,
@@ -23,6 +28,7 @@ export function FirmwarePanel({ available }: FirmwarePanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [result, setResult] = useState<{ id: string; message: string } | null>(null);
+  const [securityId, setSecurityId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!available) return;
@@ -40,6 +46,11 @@ export function FirmwarePanel({ available }: FirmwarePanelProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!available) return;
+    getSecurityId().then(setSecurityId).catch(() => undefined);
+  }, [available]);
 
   const applyUpdate = async (deviceId: string) => {
     setUpdating(deviceId);
@@ -81,6 +92,12 @@ export function FirmwarePanel({ available }: FirmwarePanelProps) {
             <Download className="size-5" />
             <CardTitle>Firmware updates</CardTitle>
             <Badge>fwupd connected</Badge>
+            {securityId && (
+              <Badge variant="secondary" className="gap-1">
+                <Shield className="size-3" />
+                {securityId}
+              </Badge>
+            )}
           </div>
           <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />

@@ -1,5 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { FirmwareDevice, StartupStatus, TelemetrySnapshot } from "@/types";
+import type {
+  BatteryHealth,
+  BrightnessInfo,
+  FirmwareDevice,
+  RadioInfo,
+  StartupStatus,
+  TelemetrySnapshot,
+} from "@/types";
 
 export function tauriErrorMessage(error: unknown): string {
   if (typeof error === "string") return error;
@@ -45,4 +52,32 @@ export async function getThermalProfile(): Promise<string> {
 
 export async function setThermalProfile(profile: string): Promise<void> {
   return invoke("set_thermal_profile", { profile });
+}
+
+export async function getBrightness(): Promise<BrightnessInfo | null> {
+  return invoke<BrightnessInfo | null>("get_brightness");
+}
+
+export async function setBrightness(device: string, value: number): Promise<void> {
+  return invoke("set_brightness", { device, value });
+}
+
+export async function listRadios(): Promise<RadioInfo[]> {
+  return invoke<RadioInfo[]>("list_radios");
+}
+
+export async function setRadioBlocked(name: string, blocked: boolean): Promise<void> {
+  return invoke("set_radio_blocked", { name, blocked });
+}
+
+export async function getBatteryHealth(): Promise<BatteryHealth | null> {
+  return invoke<BatteryHealth | null>("get_battery_health");
+}
+
+export async function getSecurityId(): Promise<string> {
+  return invoke<string>("get_security_id");
+}
+
+export async function unlockPrivileged(): Promise<void> {
+  return invoke("unlock_privileged");
 }

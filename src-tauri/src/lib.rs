@@ -3,13 +3,16 @@ mod error;
 mod fwupd;
 mod model;
 mod permissions;
+mod privileged;
 mod sysfs;
+mod system;
 mod telemetry;
 mod thermal;
 
 use error::AppResult;
 use fwupd::FirmwareDevice;
 use model::DeviceInfo;
+use system::{BatteryHealth, BrightnessInfo, RadioInfo};
 use telemetry::TelemetrySnapshot;
 
 #[derive(Debug, serde::Serialize)]
@@ -101,10 +104,107 @@ fn set_thermal_profile(profile: String) -> AppResult<()> {
     thermal::set_profile(&profile)
 }
 
+#[tauri::command]
+fn get_brightness() -> Option<BrightnessInfo> {
+    system::read_brightness()
+}
+
+#[tauri::command]
+fn set_brightness(device: String, value: u32) -> AppResult<()> {
+    system::set_brightness(&device, value)
+}
+
+#[tauri::command]
+fn list_radios() -> Vec<RadioInfo> {
+    system::read_radios()
+}
+
+#[tauri::command]
+fn set_radio_blocked(name: String, blocked: bool) -> AppResult<()> {
+    system::set_radio_blocked(&name, blocked)
+}
+
+#[tauri::command]
+fn get_battery_health() -> Option<BatteryHealth> {
+    system::read_battery_health()
+}
+
+#[tauri::command]
+async fn get_security_id() -> AppResult<String> {
+    fwupd::security_id().await
+}
+
+#[tauri::command]
+async fn unlock_privileged() -> AppResult<()> {
+    tauri::async_runtime::spawn_blocking(privileged::unlock_privileged_paths)
+        .await
+        .map_err(|e| crate::error::AppError::Other(e.to_string()))?
+}
+
+fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
+    use tauri::menu::{MenuBuilder, MenuItemBuilder};
+    use tauri::tray::TrayIconBuilder;
+    use tauri::Manager;
+
+    let show_item = MenuItemBuilder::with_id("show", "Show SenseCenter").build(app)?;
+    let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+    let menu = MenuBuilder::new(app).items(&[&show_item, &quit_item]).build()?;
+
+    let mut tray = TrayIconBuilder::new();
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+
+    tray
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let tauri::tray::TrayIconEvent::Click {
+                button: tauri::tray::MouseButton::Left,
+                button_state: tauri::tray::MouseButtonState::Up,
+                ..
+            } = event
+            {
+                let app = tray.app_handle();
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
+        .setup(|app| {
+            build_tray(app.handle())?;
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let _ = window.hide();
+                api.prevent_close();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             get_startup_status,
             read_control,
@@ -116,6 +216,13 @@ pub fn run() {
             list_thermal_profiles,
             get_thermal_profile,
             set_thermal_profile,
+            get_brightness,
+            set_brightness,
+            list_radios,
+            set_radio_blocked,
+            get_battery_health,
+            get_security_id,
+            unlock_privileged,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

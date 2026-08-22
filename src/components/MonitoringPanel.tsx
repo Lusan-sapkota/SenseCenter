@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Activity, Fan, Network, Thermometer, Zap } from "lucide-react";
+import { Activity, Cpu, Fan, Gauge, HardDrive, MemoryStick, Network, Thermometer, Zap } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
@@ -51,6 +51,27 @@ function formatRate(bytesPerSec: number): string {
   return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
 }
 
+function formatBytes(bytes: number): string {
+  const gib = bytes / (1024 * 1024 * 1024);
+  if (gib < 1) return `${(bytes / (1024 * 1024)).toFixed(0)} MiB`;
+  return `${gib.toFixed(1)} GiB`;
+}
+
+function formatKib(kib: number): string {
+  if (kib < 1024) return `${kib.toFixed(0)} KiB`;
+  if (kib < 1024 * 1024) return `${(kib / 1024).toFixed(1)} MiB`;
+  return `${(kib / (1024 * 1024)).toFixed(1)} GiB`;
+}
+
+function formatUptime(secs: number): string {
+  const days = Math.floor(secs / 86400);
+  const hours = Math.floor((secs % 86400) / 3600);
+  const minutes = Math.floor((secs % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
 export function MonitoringPanel({ snapshot, history, error }: MonitoringPanelProps) {
   const labels = [
     ...new Set(history.map((point) => String(point.label)).filter(Boolean)),
@@ -76,6 +97,16 @@ export function MonitoringPanel({ snapshot, history, error }: MonitoringPanelPro
       ? Math.round((snapshot.gpu.memory_used_mib / snapshot.gpu.memory_total_mib) * 100)
       : null;
   const totalPowerW = snapshot?.power.reduce((sum, r) => sum + r.value, 0) ?? null;
+
+  const memory = snapshot?.memory ?? null;
+  const memUsedPct = memory
+    ? Math.round(((memory.total_kib - memory.available_kib) / memory.total_kib) * 100)
+    : null;
+  const swapUsedKib = memory ? memory.swap_total_kib - memory.swap_free_kib : null;
+  const swapUsedPct =
+    memory && memory.swap_total_kib > 0
+      ? Math.round((swapUsedKib! / memory.swap_total_kib) * 100)
+      : null;
 
   return (
     <div className="space-y-4">
@@ -109,6 +140,38 @@ export function MonitoringPanel({ snapshot, history, error }: MonitoringPanelPro
           icon={Zap}
           label="Total power"
           value={totalPowerW ? `${totalPowerW.toFixed(1)} W` : "—"}
+        />
+        <Stat
+          icon={Cpu}
+          label="CPU usage / freq"
+          value={
+            snapshot?.cpu.usage_pct != null
+              ? `${snapshot.cpu.usage_pct.toFixed(0)}%${
+                  snapshot.cpu.freq_mhz != null ? ` · ${(snapshot.cpu.freq_mhz / 1000).toFixed(2)} GHz` : ""
+                }`
+              : "—"
+          }
+        />
+        <Stat
+          icon={MemoryStick}
+          label="RAM"
+          value={memUsedPct != null ? `${memUsedPct}% used` : "—"}
+        />
+        <Stat
+          icon={MemoryStick}
+          label="Swap"
+          value={
+            swapUsedPct != null
+              ? `${swapUsedPct}% · ${formatKib(swapUsedKib ?? 0)}`
+              : memory?.swap_total_kib === 0
+                ? "no swap"
+                : "—"
+          }
+        />
+        <Stat
+          icon={Activity}
+          label="Uptime"
+          value={snapshot?.uptime_secs != null ? formatUptime(snapshot.uptime_secs) : "—"}
         />
       </div>
 
@@ -162,6 +225,71 @@ export function MonitoringPanel({ snapshot, history, error }: MonitoringPanelPro
           )}
         </CardContent>
       </Card>
+
+      {snapshot?.gpu && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Gauge className="size-4" />
+              <CardTitle>GPU</CardTitle>
+            </div>
+            <CardDescription>
+              Fan speed isn&apos;t exposed by NVIDIA&apos;s driver for laptop GPUs — see the CPU/GPU
+              fan RPMs below instead, read straight from the EC.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Power draw</p>
+                <p className="tabular-nums">
+                  {snapshot.gpu.power_w != null ? `${snapshot.gpu.power_w.toFixed(1)} W` : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Power limit</p>
+                <p className="tabular-nums">
+                  {snapshot.gpu.power_limit_w != null
+                    ? `${snapshot.gpu.power_limit_w.toFixed(0)} W`
+                    : "—"}
+                  {snapshot.gpu.power_limit_min_w != null && snapshot.gpu.power_limit_max_w != null && (
+                    <span className="text-xs text-muted-foreground">
+                      {" "}
+                      ({snapshot.gpu.power_limit_min_w.toFixed(0)}–
+                      {snapshot.gpu.power_limit_max_w.toFixed(0)} W range)
+                    </span>
+                  )}
+                </p>
+                {snapshot.gpu.power_limit_default_w != null && (
+                  <p className="text-xs text-muted-foreground">
+                    Factory default {snapshot.gpu.power_limit_default_w.toFixed(0)} W
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Graphics clock</p>
+                <p className="tabular-nums">
+                  {snapshot.gpu.clock_graphics_mhz != null
+                    ? `${snapshot.gpu.clock_graphics_mhz} MHz`
+                    : "—"}
+                  {snapshot.gpu.clock_graphics_max_mhz != null && (
+                    <span className="text-xs text-muted-foreground">
+                      {" "}
+                      / {snapshot.gpu.clock_graphics_max_mhz} max
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Memory clock</p>
+                <p className="tabular-nums">
+                  {snapshot.gpu.clock_memory_mhz != null ? `${snapshot.gpu.clock_memory_mhz} MHz` : "—"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -217,6 +345,101 @@ export function MonitoringPanel({ snapshot, history, error }: MonitoringPanelPro
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No power sensors reported.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <MemoryStick className="size-4" />
+              <CardTitle>Memory</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {memory ? (
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">RAM used</span>
+                  <span className="tabular-nums">
+                    {formatKib(memory.total_kib - memory.available_kib)} / {formatKib(memory.total_kib)}
+                  </span>
+                </div>
+                {memory.swap_devices.length > 0 ? (
+                  <div className="space-y-1 border-t border-border/60 pt-2">
+                    {memory.swap_devices.map((dev) => (
+                      <div key={dev.name} className="flex items-center justify-between">
+                        <span className="text-muted-foreground">
+                          {dev.name.replace("/dev/", "")} <span className="text-xs">({dev.kind}, prio {dev.priority})</span>
+                        </span>
+                        <span className="tabular-nums">
+                          {formatKib(dev.used_kib)} / {formatKib(dev.size_kib)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Swap used</span>
+                    <span className="tabular-nums">
+                      {formatKib(swapUsedKib ?? 0)} / {formatKib(memory.swap_total_kib)}
+                    </span>
+                  </div>
+                )}
+                {snapshot?.cpu.governor && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">CPU governor</span>
+                    <span className="tabular-nums">{snapshot.cpu.governor}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No memory data reported.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <HardDrive className="size-4" />
+              <CardTitle>Disk</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {snapshot && snapshot.disk_space.length > 0 && (
+              <div className="divide-y divide-border/60 border-b border-border/60 pb-1">
+                {snapshot.disk_space.map((d) => {
+                  const pct = Math.round((d.used_bytes / d.total_bytes) * 100);
+                  return (
+                    <div key={d.mount} className="flex items-center justify-between py-2 text-sm">
+                      <span className="font-medium">{d.mount}</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {formatBytes(d.used_bytes)} / {formatBytes(d.total_bytes)} ({pct}%)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {snapshot && snapshot.disks.length > 0 ? (
+              <div className="divide-y divide-border/60">
+                {snapshot.disks.map((disk) => (
+                  <div
+                    key={disk.device}
+                    className="flex items-center justify-between py-2 text-sm"
+                  >
+                    <span className="font-medium">{disk.device}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      ↓ {formatRate(disk.read_bytes_per_sec)} · ↑ {formatRate(disk.write_bytes_per_sec)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Collecting samples…</p>
             )}
           </CardContent>
         </Card>

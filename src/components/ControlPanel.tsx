@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { readControl, tauriErrorMessage, writeControl } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -20,8 +19,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { RgbControl } from "@/components/RgbControl";
 import { ThermalControl } from "@/components/ThermalControl";
+import { SystemControl } from "@/components/SystemControl";
 import type { DeviceInfo } from "@/types";
 
 interface ControlPanelProps {
@@ -36,11 +37,6 @@ const TOGGLE_CONTROLS: Record<string, string> = {
   lcd_override: "LCD latency override",
   battery_calibration: "Battery calibration cycle",
 };
-
-const FAN_PRESETS = [
-  { label: "Auto", value: "0,0" },
-  { label: "Max", value: "100,100" },
-];
 
 function hasControl(device: DeviceInfo | null, name: string) {
   return device?.available_controls.includes(name) ?? false;
@@ -112,25 +108,19 @@ function ToggleControl({
   );
 }
 
+function firstOf(v: number | readonly number[]): number {
+  return Array.isArray(v) ? v[0] : (v as number);
+}
+
+type FanMode = "auto" | "max" | "custom";
+
 export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
-  const [fanValue, setFanValue] = useState("0,0");
-  const [fanLoading, setFanLoading] = useState(false);
+  const [cpuFan, setCpuFan] = useState(50);
+  const [gpuFan, setGpuFan] = useState(50);
+  const [fanMode, setFanMode] = useState<FanMode>("auto");
   const [fanError, setFanError] = useState<string | null>(null);
   const [usbValue, setUsbValue] = useState("0");
   const [usbError, setUsbError] = useState<string | null>(null);
-
-  const loadFan = useCallback(async () => {
-    if (!hasControl(device, "fan_speed")) return;
-    setFanLoading(true);
-    try {
-      // fan_speed is write-only; keep last preset selection in UI
-      setFanError(null);
-    } catch (err) {
-      setFanError(tauriErrorMessage(err));
-    } finally {
-      setFanLoading(false);
-    }
-  }, [device]);
 
   useEffect(() => {
     if (!hasControl(device, "usb_charging")) return;
@@ -139,17 +129,23 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
       .catch((err) => setUsbError(tauriErrorMessage(err)));
   }, [device]);
 
-  useEffect(() => {
-    void loadFan();
-  }, [loadFan]);
-
-  const applyFan = async (value: string) => {
+  const applyFan = async (cpu: number, gpu: number) => {
     setFanError(null);
-    setFanValue(value);
     try {
-      await writeControl("fan_speed", value);
+      await writeControl("fan_speed", `${cpu},${gpu}`);
     } catch (err) {
       setFanError(tauriErrorMessage(err));
+    }
+  };
+
+  const setFanModeAndApply = async (mode: FanMode) => {
+    setFanMode(mode);
+    if (mode === "auto") {
+      await applyFan(0, 0);
+    } else if (mode === "max") {
+      await applyFan(100, 100);
+    } else {
+      await applyFan(cpuFan, gpuFan);
     }
   };
 
@@ -211,39 +207,76 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
         <Card>
           <CardHeader>
             <CardTitle>Fan speed</CardTitle>
-            <CardDescription>
-              Write-only control — format <code className="text-xs">cpu,gpu</code>
-            </CardDescription>
+            <CardDescription>Write-only control — no RPM readback from this file itself.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-2">
-              {FAN_PRESETS.map((preset) => (
-                <Button
-                  key={preset.value}
-                  variant={fanValue === preset.value ? "default" : "outline"}
-                  size="sm"
-                  disabled={!controlsEnabled || fanLoading}
-                  onClick={() => void applyFan(preset.value)}
-                >
-                  {preset.label}
-                </Button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                value={fanValue}
-                onChange={(e) => setFanValue(e.target.value)}
-                placeholder="50,70"
-                disabled={!controlsEnabled}
-              />
               <Button
-                variant="secondary"
+                variant={fanMode === "auto" ? "default" : "outline"}
+                size="sm"
                 disabled={!controlsEnabled}
-                onClick={() => void applyFan(fanValue)}
+                onClick={() => void setFanModeAndApply("auto")}
               >
-                Apply
+                Auto
+              </Button>
+              <Button
+                variant={fanMode === "max" ? "default" : "outline"}
+                size="sm"
+                disabled={!controlsEnabled}
+                onClick={() => void setFanModeAndApply("max")}
+              >
+                Max
+              </Button>
+              <Button
+                variant={fanMode === "custom" ? "default" : "outline"}
+                size="sm"
+                disabled={!controlsEnabled}
+                onClick={() => void setFanModeAndApply("custom")}
+              >
+                Custom
               </Button>
             </div>
+            {fanMode === "custom" && (
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">CPU fan</span>
+                    <span className="tabular-nums">{cpuFan}%</span>
+                  </div>
+                  <Slider
+                    value={[cpuFan]}
+                    min={1}
+                    max={100}
+                    disabled={!controlsEnabled}
+                    onValueChange={(v) => {
+                      const next = firstOf(v);
+                      setCpuFan(next);
+                      void applyFan(next, gpuFan);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">GPU fan</span>
+                    <span className="tabular-nums">{gpuFan}%</span>
+                  </div>
+                  <Slider
+                    value={[gpuFan]}
+                    min={1}
+                    max={100}
+                    disabled={!controlsEnabled}
+                    onValueChange={(v) => {
+                      const next = firstOf(v);
+                      setGpuFan(next);
+                      void applyFan(cpuFan, next);
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  1% is the kernel module&apos;s documented minimum and isn&apos;t recommended for sustained use.
+                </p>
+              </>
+            )}
             {fanError && <p className="text-sm text-destructive">{fanError}</p>}
           </CardContent>
         </Card>
@@ -283,6 +316,8 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
       )}
 
       <ThermalControl disabled={!controlsEnabled} />
+
+      <SystemControl />
     </div>
   );
 }
