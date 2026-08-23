@@ -24,6 +24,11 @@ const EFFECT_MODES = [
   { value: "7", label: "Twinkling" },
 ];
 
+const DIRECTIONS = [
+  { value: "1", label: "Right → left" },
+  { value: "2", label: "Left → right" },
+];
+
 function firstOf(v: number | readonly number[]): number {
   return Array.isArray(v) ? v[0] : (v as number);
 }
@@ -172,7 +177,9 @@ export function RgbControl({ disabled }: RgbControlProps) {
               <span className="text-xs text-muted-foreground">Mode</span>
               <Select value={mode} onValueChange={(v) => v && setMode(v)} disabled={disabled}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(v: string) => EFFECT_MODES.find((m) => m.value === v)?.label ?? v}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {EFFECT_MODES.map((m) => (
@@ -191,11 +198,16 @@ export function RgbControl({ disabled }: RgbControlProps) {
                 disabled={disabled}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(v: string) => DIRECTIONS.find((d) => d.value === v)?.label ?? v}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Right → left</SelectItem>
-                  <SelectItem value="2">Left → right</SelectItem>
+                  {DIRECTIONS.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>
+                      {d.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

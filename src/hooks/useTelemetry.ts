@@ -2,10 +2,9 @@ import { startTransition, useCallback, useEffect, useRef, useState } from "react
 import { getTelemetry, tauriErrorMessage } from "@/lib/api";
 import type { TelemetryPoint, TelemetrySnapshot } from "@/types";
 
-const POLL_MS = 2000;
 const HISTORY_LIMIT = 60;
 
-export function useTelemetry(enabled: boolean) {
+export function useTelemetry(enabled: boolean, pollMs: number) {
   const [snapshot, setSnapshot] = useState<TelemetrySnapshot | null>(null);
   const [history, setHistory] = useState<TelemetryPoint[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +53,9 @@ export function useTelemetry(enabled: boolean) {
     if (!enabled) return;
 
     void poll();
-    const id = window.setInterval(() => void poll(), POLL_MS);
+    const id = window.setInterval(() => void poll(), pollMs);
     return () => window.clearInterval(id);
-  }, [enabled, poll]);
+  }, [enabled, pollMs, poll]);
 
   return { snapshot, history, error, refresh: poll };
 }

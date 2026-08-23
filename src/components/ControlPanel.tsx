@@ -58,6 +58,13 @@ function hasControl(device: DeviceInfo | null, name: string) {
   return device?.available_controls.includes(name) ?? false;
 }
 
+const USB_CHARGING_LEVELS = [
+  { value: "0", label: "Off" },
+  { value: "10", label: "Up to 10% battery" },
+  { value: "20", label: "Up to 20% battery" },
+  { value: "30", label: "Up to 30% battery" },
+];
+
 function ToggleControl({
   name,
   label,
@@ -352,13 +359,16 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
                 }}
               >
                 <SelectTrigger className="w-full max-w-xs">
-                  <SelectValue placeholder="Select level" />
+                  <SelectValue placeholder="Select level">
+                    {(v: string) => USB_CHARGING_LEVELS.find((l) => l.value === v)?.label ?? v}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Off</SelectItem>
-                  <SelectItem value="10">Up to 10% battery</SelectItem>
-                  <SelectItem value="20">Up to 20% battery</SelectItem>
-                  <SelectItem value="30">Up to 30% battery</SelectItem>
+                  {USB_CHARGING_LEVELS.map((l) => (
+                    <SelectItem key={l.value} value={l.value}>
+                      {l.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {usbError && <p className="mt-2 text-sm text-destructive">{usbError}</p>}

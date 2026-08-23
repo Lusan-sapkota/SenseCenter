@@ -80,7 +80,7 @@ export function ThermalControl({ disabled }: ThermalControlProps) {
               disabled={disabled}
               onClick={() => void onSelect(profile)}
               className={cn(
-                "flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all",
+                "flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all",
                 active
                   ? "border-brand-violet/50 bg-gradient-to-r from-brand-teal/10 to-brand-violet/10 ring-1 ring-brand-violet/30"
                   : "border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40",

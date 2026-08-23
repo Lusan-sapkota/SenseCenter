@@ -16,10 +16,18 @@ import { Badge } from "@/components/ui/badge";
 import { Gauge as GaugeRing, GaugeSkeleton } from "@/components/ui/gauge";
 import { MetricCard } from "@/components/ui/metric-card";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PanelCard, SectionHeader } from "@/components/layout/AppShell";
 import { TemperatureChart } from "@/components/TemperatureChart";
 import { useTelemetry } from "@/hooks/useTelemetry";
+import { usePollInterval } from "@/hooks/usePollInterval";
 import {
   fanColor,
   formatBytes,
@@ -35,6 +43,14 @@ import {
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+const POLL_INTERVAL_OPTIONS = [
+  { value: "1000", label: "1s" },
+  { value: "2000", label: "2s" },
+  { value: "5000", label: "5s" },
+  { value: "10000", label: "10s" },
+  { value: "30000", label: "30s" },
+];
 
 function GaugeLink({
   onClick,
@@ -85,7 +101,8 @@ function StatBlock({
 }
 
 export function MonitoringPanel() {
-  const { snapshot, history, error } = useTelemetry(true);
+  const [pollMs, setPollMs] = usePollInterval();
+  const { snapshot, history, error } = useTelemetry(true, pollMs);
   const [sensorsOpen, setSensorsOpen] = useState(false);
 
   const jumpToSensors = useCallback(() => {
@@ -124,8 +141,26 @@ export function MonitoringPanel() {
     <div className="space-y-6">
       <SectionHeader
         title="Live Dashboard"
-        description="Real-time hardware telemetry  polled every 2 seconds"
+        description={`Real-time hardware telemetry  polled every ${pollMs / 1000}s`}
         icon={Activity}
+        action={
+          <Select value={String(pollMs)} onValueChange={(v) => v && setPollMs(Number(v))}>
+            <SelectTrigger size="sm" aria-label="Polling interval">
+              <SelectValue>
+                {(v: string) =>
+                  `Every ${POLL_INTERVAL_OPTIONS.find((o) => o.value === v)?.label ?? `${Number(v) / 1000}s`}`
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {POLL_INTERVAL_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
       />
 
       {error && (
@@ -476,7 +511,7 @@ function SensorDisclosure({
       <button
         type="button"
         onClick={() => onOpenChange(!open)}
-        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+        className="flex w-full cursor-pointer items-center justify-between gap-3 px-5 py-4 text-left"
       >
         <div className="flex items-center gap-2.5">
           <div className="flex size-7 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">

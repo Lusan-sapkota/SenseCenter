@@ -117,7 +117,7 @@ export function Sidebar({
               title={collapsed ? item.label : undefined}
               aria-label={item.label}
               className={cn(
-                "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all duration-200",
+                "group relative flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all duration-200",
                 collapsed && "justify-center px-0",
                 isActive
                   ? "translate-x-0.5 bg-gradient-to-r from-brand-teal/20 to-brand-violet/20 text-foreground shadow-sm ring-1 ring-brand-violet/30"
@@ -156,7 +156,7 @@ export function Sidebar({
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           className={cn(
-            "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground",
+            "flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground",
             collapsed && "justify-center px-2",
           )}
         >
@@ -219,11 +219,13 @@ export function SectionHeader({
   description,
   icon: Icon,
   badge,
+  action,
 }: {
   title: string;
   description?: string;
   icon?: typeof Cpu;
   badge?: ReactNode;
+  action?: ReactNode;
 }) {
   return (
     <div className="mb-5 flex items-start justify-between gap-4">
@@ -243,6 +245,7 @@ export function SectionHeader({
           )}
         </div>
       </div>
+      {action}
     </div>
   );
 }
