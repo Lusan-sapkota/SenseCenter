@@ -55,12 +55,12 @@ function App() {
             onPollMsChange={setPollMs}
           />
         )}
-        {section === "controls" && (
+        <div hidden={section !== "controls"}>
           <ControlPanel
             device={status?.device ?? null}
             controlsEnabled={controlsEnabled}
           />
-        )}
+        </div>
         {section === "firmware" && (
           <FirmwarePanel available={status?.fwupd_available ?? false} />
         )}

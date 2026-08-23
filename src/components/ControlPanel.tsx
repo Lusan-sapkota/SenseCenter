@@ -168,21 +168,51 @@ function firstOf(v: number | readonly number[]): number {
 
 type FanMode = "auto" | "max" | "custom";
 
-export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
+function parseFanSpeed(value: string): { mode: FanMode; cpu: number; gpu: number } {
+  const parts = value.trim().split(",");
+  const cpu = Number.parseInt(parts[0] ?? "", 10);
+  const gpu = Number.parseInt(parts[1] ?? "", 10);
+  if (!Number.isFinite(cpu) || !Number.isFinite(gpu)) {
+    return { mode: "auto", cpu: 50, gpu: 50 };
+  }
+  if (cpu === 0 && gpu === 0) return { mode: "auto", cpu: 50, gpu: 50 };
+  if (cpu === 100 && gpu === 100) return { mode: "max", cpu: 100, gpu: 100 };
+  return {
+    mode: "custom",
+    cpu: Math.min(100, Math.max(1, cpu)),
+    gpu: Math.min(100, Math.max(1, gpu)),
+  };
+}
+
+function FanControl({ disabled }: { disabled: boolean }) {
   const [cpuFan, setCpuFan] = useState(50);
   const [gpuFan, setGpuFan] = useState(50);
-  const [fanMode, setFanMode] = useState<FanMode>("auto");
+  const [fanMode, setFanMode] = useState<FanMode | null>(null);
   const [fanError, setFanError] = useState<string | null>(null);
-  const [usbValue, setUsbValue] = useState("0");
-  const [usbError, setUsbError] = useState<string | null>(null);
-  const system = useSystemInfo();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!hasControl(device, "usb_charging")) return;
-    readControl("usb_charging")
-      .then((v) => setUsbValue(v.trim()))
-      .catch((err) => setUsbError(tauriErrorMessage(err)));
-  }, [device]);
+    let cancelled = false;
+    setLoading(true);
+    readControl("fan_speed")
+      .then((value) => {
+        if (cancelled) return;
+        const parsed = parseFanSpeed(value);
+        setFanMode(parsed.mode);
+        setCpuFan(parsed.cpu);
+        setGpuFan(parsed.gpu);
+        setFanError(null);
+      })
+      .catch((err) => {
+        if (!cancelled) setFanError(tauriErrorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const applyFan = async (cpu: number, gpu: number) => {
     setFanError(null);
@@ -203,6 +233,88 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
       await applyFan(cpuFan, gpuFan);
     }
   };
+
+  return (
+    <PanelCard
+      title="Fan Control"
+      description="Auto (0), Max (100), or custom CPU/GPU percentages"
+      icon={Wind}
+    >
+      <div className="space-y-5">
+        {loading ? (
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {(["auto", "max", "custom"] as FanMode[]).map((mode) => (
+              <Button
+                key={mode}
+                variant={fanMode === mode ? "default" : "outline"}
+                size="sm"
+                disabled={disabled}
+                aria-pressed={fanMode === mode}
+                onClick={() => void setFanModeAndApply(mode)}
+                className="min-w-18 capitalize"
+              >
+                {mode}
+              </Button>
+            ))}
+          </div>
+        )}
+        {fanMode === "custom" && (
+          <div className="space-y-5 rounded-lg bg-muted/20 p-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">CPU Fan</span>
+                <span className="font-mono tabular-nums text-brand-teal">{cpuFan}%</span>
+              </div>
+              <Slider
+                value={[cpuFan]}
+                min={1}
+                max={100}
+                disabled={disabled}
+                onValueChange={(v) => {
+                  const next = firstOf(v);
+                  setCpuFan(next);
+                  void applyFan(next, gpuFan);
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">GPU Fan</span>
+                <span className="font-mono tabular-nums text-brand-violet">{gpuFan}%</span>
+              </div>
+              <Slider
+                value={[gpuFan]}
+                min={1}
+                max={100}
+                disabled={disabled}
+                onValueChange={(v) => {
+                  const next = firstOf(v);
+                  setGpuFan(next);
+                  void applyFan(cpuFan, next);
+                }}
+              />
+            </div>
+          </div>
+        )}
+        {fanError && <p className="text-sm text-destructive">{fanError}</p>}
+      </div>
+    </PanelCard>
+  );
+}
+
+export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
+  const [usbValue, setUsbValue] = useState("0");
+  const [usbError, setUsbError] = useState<string | null>(null);
+  const system = useSystemInfo();
+
+  useEffect(() => {
+    if (!hasControl(device, "usb_charging")) return;
+    readControl("usb_charging")
+      .then((v) => setUsbValue(v.trim()))
+      .catch((err) => setUsbError(tauriErrorMessage(err)));
+  }, [device]);
 
   const applyUsb = async (value: string) => {
     setUsbError(null);
@@ -257,67 +369,7 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
 
         <TabsContent value="performance" className="space-y-4 pt-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
           {hasControl(device, "fan_speed") && (
-            <PanelCard
-              title="Fan Control"
-              description="Auto (0), Max (100), or custom CPU/GPU percentages"
-              icon={Wind}
-            >
-              <div className="space-y-5">
-                <div className="flex flex-wrap gap-2">
-                  {(["auto", "max", "custom"] as FanMode[]).map((mode) => (
-                    <Button
-                      key={mode}
-                      variant={fanMode === mode ? "default" : "outline"}
-                      size="sm"
-                      disabled={!controlsEnabled}
-                      onClick={() => void setFanModeAndApply(mode)}
-                      className="min-w-18 capitalize"
-                    >
-                      {mode}
-                    </Button>
-                  ))}
-                </div>
-                {fanMode === "custom" && (
-                  <div className="space-y-5 rounded-lg bg-muted/20 p-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">CPU Fan</span>
-                        <span className="font-mono tabular-nums text-brand-teal">{cpuFan}%</span>
-                      </div>
-                      <Slider
-                        value={[cpuFan]}
-                        min={1}
-                        max={100}
-                        disabled={!controlsEnabled}
-                        onValueChange={(v) => {
-                          const next = firstOf(v);
-                          setCpuFan(next);
-                          void applyFan(next, gpuFan);
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">GPU Fan</span>
-                        <span className="font-mono tabular-nums text-brand-violet">{gpuFan}%</span>
-                      </div>
-                      <Slider
-                        value={[gpuFan]}
-                        min={1}
-                        max={100}
-                        disabled={!controlsEnabled}
-                        onValueChange={(v) => {
-                          const next = firstOf(v);
-                          setGpuFan(next);
-                          void applyFan(cpuFan, next);
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-                {fanError && <p className="text-sm text-destructive">{fanError}</p>}
-              </div>
-            </PanelCard>
+            <FanControl disabled={!controlsEnabled} />
           )}
 
           <ThermalControl disabled={!controlsEnabled} />
