@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
 use serde::Serialize;
@@ -520,11 +520,15 @@ pub fn read_disks() -> Vec<DiskReading> {
     readings
 }
 
+fn nvml() -> Option<&'static nvml_wrapper::Nvml> {
+    static NVML: OnceLock<Option<nvml_wrapper::Nvml>> = OnceLock::new();
+    NVML.get_or_init(|| nvml_wrapper::Nvml::init().ok()).as_ref()
+}
+
 pub fn read_gpu() -> Option<GpuReading> {
     use nvml_wrapper::enum_wrappers::device::Clock;
 
-    let nvml = nvml_wrapper::Nvml::init().ok()?;
-    let gpu = nvml.device_by_index(0).ok()?;
+    let gpu = nvml()?.device_by_index(0).ok()?;
 
     let temp_c = gpu.temperature(nvml_wrapper::enum_wrappers::device::TemperatureSensor::Gpu).ok();
     let utilization_pct = gpu.utilization_rates().ok().map(|u| u.gpu);

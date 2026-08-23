@@ -1,4 +1,4 @@
-import { BookOpen } from "lucide-react";
+import { AlertTriangle, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,17 +29,25 @@ export function DependencyModal({
 }: DependencyModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="border-border/60 bg-card/95 backdrop-blur-xl">
         <DialogHeader>
+          <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-amber-500/15">
+            <AlertTriangle className="size-5 text-amber-400" />
+          </div>
           <DialogTitle>Missing dependencies</DialogTitle>
           <DialogDescription>
-            SenseCenter needs the following before it can control or monitor
-            this laptop:
+            SenseCenter needs the following before it can control or monitor this laptop:
           </DialogDescription>
         </DialogHeader>
-        <ul className="list-disc space-y-1 pl-5 text-sm">
+        <ul className="space-y-2">
           {missing.map((dep) => (
-            <li key={dep}>{DEPENDENCY_LABELS[dep] ?? dep}</li>
+            <li
+              key={dep}
+              className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm"
+            >
+              <div className="size-1.5 rounded-full bg-amber-400" />
+              {DEPENDENCY_LABELS[dep] ?? dep}
+            </li>
           ))}
         </ul>
         <p className="text-sm text-muted-foreground">

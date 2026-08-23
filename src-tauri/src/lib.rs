@@ -70,8 +70,10 @@ fn write_control(name: String, value: String) -> AppResult<()> {
 }
 
 #[tauri::command]
-fn get_telemetry() -> AppResult<TelemetrySnapshot> {
-    telemetry::snapshot()
+async fn get_telemetry() -> AppResult<TelemetrySnapshot> {
+    tauri::async_runtime::spawn_blocking(telemetry::snapshot)
+        .await
+        .map_err(|err| crate::error::AppError::Other(err.to_string()))?
 }
 
 #[tauri::command]

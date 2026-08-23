@@ -5,7 +5,7 @@ pub enum AppError {
     #[error("linuwu_sense kernel module is not loaded")]
     ModuleNotLoaded,
 
-    #[error("user is not in the linuwu_sense group — log out and back in after being added")]
+    #[error("user is not in the linuwu_sense group  log out and back in after being added")]
     NotInLinuwuSenseGroup,
 
     #[error("sysfs path not found: {0}")]

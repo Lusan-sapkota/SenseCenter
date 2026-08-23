@@ -1,21 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Download, Loader2, RefreshCw, Shield } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  Loader2,
+  RefreshCw,
+  Shield,
+  ShieldCheck,
+} from "lucide-react";
 import {
   getSecurityId,
   listFirmwareDevices,
   tauriErrorMessage,
   triggerFirmwareUpdate,
 } from "@/lib/api";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PanelCard, SectionHeader } from "@/components/layout/AppShell";
 import type { FirmwareDevice } from "@/types";
 
 interface FirmwarePanelProps {
@@ -66,86 +67,112 @@ export function FirmwarePanel({ available }: FirmwarePanelProps) {
     }
   };
 
+  const updateCount = devices.filter((d) => d.update_available).length;
+
   if (!available) {
     return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Download className="size-5" />
-            <CardTitle>Firmware updates</CardTitle>
-            <Badge variant="secondary">unavailable</Badge>
+      <div className="space-y-6">
+        <SectionHeader
+          title="Firmware & Security"
+          description="BIOS and component updates via fwupd"
+          icon={Download}
+        />
+        <PanelCard title="fwupd Unavailable" icon={Download}>
+          <div className="flex flex-col items-center py-8 text-center">
+            <Download className="mb-3 size-10 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">
+              Install and start{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">fwupd</code> to enable
+              firmware updates from this panel.
+            </p>
           </div>
-          <CardDescription>
-            Install and start <code className="text-xs">fwupd</code> to enable BIOS
-            and component firmware updates from this panel.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+        </PanelCard>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Download className="size-5" />
-            <CardTitle>Firmware updates</CardTitle>
-            <Badge>fwupd connected</Badge>
-            {securityId && (
-              <Badge variant="secondary" className="gap-1">
-                <Shield className="size-3" />
-                {securityId}
-              </Badge>
-            )}
+    <div className="space-y-6">
+      <SectionHeader
+        title="Firmware & Security"
+        description="Devices reported by fwupd  updates delegate auth to polkit"
+        icon={Download}
+        badge={
+          updateCount > 0 ? (
+            <Badge>{updateCount} update{updateCount !== 1 ? "s" : ""} available</Badge>
+          ) : (
+            <Badge variant="secondary">All up to date</Badge>
+          )
+        }
+      />
+
+      {securityId && (
+        <div className="flex items-center gap-3 rounded-xl border border-brand-teal/20 bg-gradient-to-r from-brand-teal/10 to-brand-violet/10 px-5 py-4">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-background/40">
+            <ShieldCheck className="size-5 text-brand-teal" />
           </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Host Security ID
+            </p>
+            <p className="font-mono text-sm font-medium">{securityId}</p>
+          </div>
+        </div>
+      )}
+
+      <PanelCard
+        title="Firmware Devices"
+        description="Updates run via fwupdmgr update"
+        icon={Shield}
+        action={
           <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
-            <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`mr-1.5 size-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-        </div>
-        <CardDescription>
-          Devices reported by fwupd. Updates run via{" "}
-          <code className="text-xs">fwupdmgr update</code>, which handles its own
-          download and polkit authorization.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+        }
+      >
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         {loading && devices.length === 0 && (
-          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
             <Loader2 className="mr-2 size-4 animate-spin" />
             Querying fwupd…
           </div>
         )}
 
         {!loading && devices.length === 0 && !error && (
-          <p className="py-4 text-sm text-muted-foreground">No devices reported.</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">No devices reported.</p>
         )}
 
-        <div className="divide-y divide-border/60">
+        <div className="space-y-2">
           {devices.map((device) => (
-            <div key={device.id} className="flex items-center justify-between gap-4 py-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
+            <div
+              key={device.id}
+              className={`flex items-center justify-between gap-4 rounded-lg border px-4 py-3.5 transition-colors ${
+                device.update_available
+                  ? "border-brand-violet/30 bg-brand-violet/5"
+                  : "border-border/40 bg-muted/20"
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium">{device.name}</span>
                   {device.update_available ? (
-                    <Badge>update available</Badge>
+                    <Badge>Update available</Badge>
                   ) : (
-                    <Badge variant="secondary">up to date</Badge>
+                    <Badge variant="secondary">Up to date</Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {device.vendor ?? "Unknown vendor"}
                   {device.version ? ` · v${device.version}` : ""}
                 </p>
                 {result?.id === device.id && (
-                  <p className="text-xs text-muted-foreground">{result.message}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{result.message}</p>
                 )}
               </div>
               {device.update_available && (
@@ -155,9 +182,9 @@ export function FirmwarePanel({ available }: FirmwarePanelProps) {
                   onClick={() => void applyUpdate(device.id)}
                 >
                   {updating === device.id ? (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
                   ) : (
-                    <CheckCircle2 className="mr-2 size-4" />
+                    <CheckCircle2 className="mr-1.5 size-3.5" />
                   )}
                   Update
                 </Button>
@@ -165,7 +192,7 @@ export function FirmwarePanel({ available }: FirmwarePanelProps) {
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </PanelCard>
+    </div>
   );
 }

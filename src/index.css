@@ -102,6 +102,30 @@
   html {
     @apply font-sans;
   }
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: var(--font-heading);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    background: linear-gradient(100deg, var(--brand-teal), var(--brand-violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .glass-panel {
+    @apply rounded-xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-sm;
+  }
 }
 
 .dark {

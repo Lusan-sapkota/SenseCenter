@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
+import { Palette, Sparkles } from "lucide-react";
 import { readControl, tauriErrorMessage, writeControl } from "@/lib/api";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -17,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PanelCard } from "@/components/layout/AppShell";
 
 const EFFECT_MODES = [
   { value: "0", label: "Static" },
@@ -45,6 +40,23 @@ interface RgbControlProps {
   disabled: boolean;
 }
 
+function KeyboardPreview({ zones }: { zones: string[] }) {
+  return (
+    <div className="flex gap-1 rounded-lg bg-muted/40 p-3">
+      {zones.map((color, i) => (
+        <div
+          key={i}
+          className="h-8 flex-1 rounded-md transition-all duration-300"
+          style={{
+            background: color,
+            boxShadow: `0 0 12px ${color}66`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function RgbControl({ disabled }: RgbControlProps) {
   const [zones, setZones] = useState(["#1FCBB0", "#1FCBB0", "#7A63EE", "#7A63EE"]);
   const [zoneBrightness, setZoneBrightness] = useState(100);
@@ -66,9 +78,7 @@ export function RgbControl({ disabled }: RgbControlProps) {
           setZoneBrightness(Number(parts[4]) || 100);
         }
       })
-      .catch(() => {
-        // no current value available yet — keep defaults
-      });
+      .catch(() => undefined);
   }, []);
 
   const applyZones = async () => {
@@ -93,38 +103,45 @@ export function RgbControl({ disabled }: RgbControlProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Keyboard RGB</CardTitle>
-        <CardDescription>Four-zone backlight — static colors or an animated effect.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-3">
-          <Label>Per-zone color</Label>
-          <p className="text-xs text-muted-foreground">
-            Zones follow linuwu-sense's own left-to-right order (Zone 1 → Zone 4). Not
-            hardware-verified on your keyboard — set one zone to a distinct color to confirm
-            which physical section it maps to.
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
+    <PanelCard
+      title="Keyboard RGB"
+      description="Four-zone backlight  static per-zone colors or animated effects"
+      icon={Palette}
+    >
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Per-zone static color
+          </Label>
+          <KeyboardPreview zones={zones} />
+          <div className="flex flex-wrap items-end gap-4">
             {zones.map((color, i) => (
-              <div key={i} className="flex flex-col items-center gap-1">
-                <input
-                  type="color"
-                  value={color}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    const next = [...zones];
-                    next[i] = e.target.value;
-                    setZones(next);
-                  }}
-                  className="size-9 cursor-pointer rounded-md border border-border/60 bg-transparent"
-                />
-                <span className="text-[10px] text-muted-foreground">Zone {i + 1}</span>
+              <div key={i} className="flex flex-col items-center gap-1.5">
+                <div
+                  className="relative overflow-hidden rounded-lg ring-2 ring-border/60 transition-all hover:ring-brand-teal/50"
+                  style={{ background: color }}
+                >
+                  <input
+                    type="color"
+                    value={color}
+                    disabled={disabled}
+                    onChange={(e) => {
+                      const next = [...zones];
+                      next[i] = e.target.value;
+                      setZones(next);
+                    }}
+                    className="size-12 cursor-pointer opacity-0"
+                  />
+                </div>
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  Zone {i + 1}
+                </span>
               </div>
             ))}
-            <div className="flex min-w-40 items-center gap-2">
-              <span className="text-xs text-muted-foreground">Brightness</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex min-w-48 flex-1 items-center gap-3">
+              <span className="shrink-0 text-xs text-muted-foreground">Brightness</span>
               <Slider
                 value={[zoneBrightness]}
                 onValueChange={(v) => setZoneBrightness(firstOf(v))}
@@ -132,21 +149,29 @@ export function RgbControl({ disabled }: RgbControlProps) {
                 max={100}
                 disabled={disabled}
               />
+              <span className="w-8 shrink-0 font-mono text-xs tabular-nums">
+                {zoneBrightness}
+              </span>
             </div>
             <Button size="sm" disabled={disabled} onClick={() => void applyZones()}>
-              Apply
+              Apply static
             </Button>
           </div>
           {zoneError && <p className="text-sm text-destructive">{zoneError}</p>}
         </div>
 
-        <div className="space-y-3 border-t border-border/60 pt-4">
-          <Label>Effect</Label>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
+        <div className="space-y-4 border-t border-border/40 pt-6">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4 text-brand-violet" />
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Animated effect
+            </Label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1.5">
               <span className="text-xs text-muted-foreground">Mode</span>
               <Select value={mode} onValueChange={(v) => v && setMode(v)} disabled={disabled}>
-                <SelectTrigger className="w-36">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -158,10 +183,14 @@ export function RgbControl({ disabled }: RgbControlProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <span className="text-xs text-muted-foreground">Direction</span>
-              <Select value={direction} onValueChange={(v) => v && setDirection(v)} disabled={disabled}>
-                <SelectTrigger className="w-32">
+              <Select
+                value={direction}
+                onValueChange={(v) => v && setDirection(v)}
+                disabled={disabled}
+              >
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -170,40 +199,47 @@ export function RgbControl({ disabled }: RgbControlProps) {
                 </SelectContent>
               </Select>
             </div>
-            <input
-              type="color"
-              value={effectColor}
-              disabled={disabled}
-              onChange={(e) => setEffectColor(e.target.value)}
-              className="size-9 cursor-pointer rounded-md border border-border/60 bg-transparent"
-            />
-            <div className="flex min-w-32 items-center gap-2">
-              <span className="text-xs text-muted-foreground">Speed</span>
-              <Slider
-                value={[speed]}
-                onValueChange={(v) => setSpeed(firstOf(v))}
-                min={0}
-                max={9}
-                disabled={disabled}
-              />
+            <div className="space-y-1.5">
+              <span className="text-xs text-muted-foreground">Effect color</span>
+              <div
+                className="relative overflow-hidden rounded-lg ring-1 ring-border/60"
+                style={{ background: effectColor }}
+              >
+                <input
+                  type="color"
+                  value={effectColor}
+                  disabled={disabled}
+                  onChange={(e) => setEffectColor(e.target.value)}
+                  className="h-9 w-full cursor-pointer opacity-0"
+                />
+              </div>
             </div>
-            <div className="flex min-w-32 items-center gap-2">
-              <span className="text-xs text-muted-foreground">Brightness</span>
-              <Slider
-                value={[effectBrightness]}
-                onValueChange={(v) => setEffectBrightness(firstOf(v))}
-                min={0}
-                max={100}
-                disabled={disabled}
-              />
+            <div className="space-y-1.5">
+              <span className="text-xs text-muted-foreground">Speed · Brightness</span>
+              <div className="space-y-2">
+                <Slider
+                  value={[speed]}
+                  onValueChange={(v) => setSpeed(firstOf(v))}
+                  min={0}
+                  max={9}
+                  disabled={disabled}
+                />
+                <Slider
+                  value={[effectBrightness]}
+                  onValueChange={(v) => setEffectBrightness(firstOf(v))}
+                  min={0}
+                  max={100}
+                  disabled={disabled}
+                />
+              </div>
             </div>
-            <Button size="sm" disabled={disabled} onClick={() => void applyEffect()}>
-              Apply
-            </Button>
           </div>
+          <Button size="sm" disabled={disabled} onClick={() => void applyEffect()}>
+            Apply effect
+          </Button>
           {effectError && <p className="text-sm text-destructive">{effectError}</p>}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </PanelCard>
   );
 }
