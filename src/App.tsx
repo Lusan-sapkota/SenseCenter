@@ -6,12 +6,17 @@ import { FirmwarePanel } from "@/components/FirmwarePanel";
 import { DependencyModal } from "@/components/DependencyModal";
 import { AppShell, type NavSection } from "@/components/layout/AppShell";
 import { useStartupStatus } from "@/hooks/useStartupStatus";
+import { useTelemetry } from "@/hooks/useTelemetry";
+import { usePollInterval } from "@/hooks/usePollInterval";
 
 function App() {
   const { status, loading, error, refresh } = useStartupStatus();
   const controlsEnabled = Boolean(
     status?.module_loaded && status.in_linuwu_sense_group && status.device,
   );
+
+  const [pollMs, setPollMs] = usePollInterval();
+  const telemetry = useTelemetry(true, pollMs);
 
   const [section, setSection] = useState<NavSection>("monitor");
   const [depModalOpen, setDepModalOpen] = useState(false);
@@ -41,7 +46,15 @@ function App() {
           />
         }
       >
-        {section === "monitor" && <MonitoringPanel />}
+        {section === "monitor" && (
+          <MonitoringPanel
+            snapshot={telemetry.snapshot}
+            history={telemetry.history}
+            error={telemetry.error}
+            pollMs={pollMs}
+            onPollMsChange={setPollMs}
+          />
+        )}
         {section === "controls" && (
           <ControlPanel
             device={status?.device ?? null}

@@ -26,8 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PanelCard, SectionHeader } from "@/components/layout/AppShell";
 import { TemperatureChart } from "@/components/TemperatureChart";
-import { useTelemetry } from "@/hooks/useTelemetry";
-import { usePollInterval } from "@/hooks/usePollInterval";
+import type { TelemetryPoint, TelemetrySnapshot } from "@/types";
 import {
   fanColor,
   formatBytes,
@@ -100,9 +99,21 @@ function StatBlock({
   );
 }
 
-export function MonitoringPanel() {
-  const [pollMs, setPollMs] = usePollInterval();
-  const { snapshot, history, error } = useTelemetry(true, pollMs);
+interface MonitoringPanelProps {
+  snapshot: TelemetrySnapshot | null;
+  history: TelemetryPoint[];
+  error: string | null;
+  pollMs: number;
+  onPollMsChange: (pollMs: number) => void;
+}
+
+export function MonitoringPanel({
+  snapshot,
+  history,
+  error,
+  pollMs,
+  onPollMsChange,
+}: MonitoringPanelProps) {
   const [sensorsOpen, setSensorsOpen] = useState(false);
 
   const jumpToSensors = useCallback(() => {
@@ -144,7 +155,7 @@ export function MonitoringPanel() {
         description={`Real-time hardware telemetry  polled every ${pollMs / 1000}s`}
         icon={Activity}
         action={
-          <Select value={String(pollMs)} onValueChange={(v) => v && setPollMs(Number(v))}>
+          <Select value={String(pollMs)} onValueChange={(v) => v && onPollMsChange(Number(v))}>
             <SelectTrigger size="sm" aria-label="Polling interval">
               <SelectValue>
                 {(v: string) =>
@@ -502,7 +513,7 @@ function SensorDisclosure({
   open,
   onOpenChange,
 }: {
-  temps: NonNullable<ReturnType<typeof useTelemetry>["snapshot"]>["temps"];
+  temps: TelemetrySnapshot["temps"];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {

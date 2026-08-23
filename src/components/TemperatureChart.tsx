@@ -81,6 +81,7 @@ export const TemperatureChart = memo(function TemperatureChart({
         />
         <YAxis
           unit="°"
+          domain={[0, 100]}
           tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
           axisLine={false}
           tickLine={false}
