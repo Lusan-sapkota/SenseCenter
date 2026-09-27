@@ -8,6 +8,7 @@ import { AppShell, type NavSection } from "@/components/layout/AppShell";
 import { useStartupStatus } from "@/hooks/useStartupStatus";
 import { useTelemetry } from "@/hooks/useTelemetry";
 import { usePollInterval } from "@/hooks/usePollInterval";
+import { restoreSavedControls } from "@/lib/api";
 
 function App() {
   const { status, loading, error, refresh } = useStartupStatus();
@@ -19,6 +20,11 @@ function App() {
   const [section, setSection] = useState<NavSection>("monitor");
   const telemetry = useTelemetry(section === "monitor", pollMs);
   const [depModalOpen, setDepModalOpen] = useState(false);
+  const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    if (controlsEnabled) void restoreSavedControls().finally(() => setRestored(true));
+  }, [controlsEnabled]);
 
   const handleRefresh = useCallback(() => void refresh(), [refresh]);
 
@@ -57,10 +63,12 @@ function App() {
           />
         </div>
         <div hidden={section !== "controls"}>
-          <ControlPanel
-            device={status?.device ?? null}
-            controlsEnabled={controlsEnabled}
-          />
+          {(restored || !controlsEnabled) && (
+            <ControlPanel
+              device={status?.device ?? null}
+              controlsEnabled={controlsEnabled}
+            />
+          )}
         </div>
         <div hidden={section !== "firmware"}>
           <FirmwarePanel available={status?.fwupd_available ?? false} />

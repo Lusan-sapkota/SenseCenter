@@ -36,9 +36,12 @@ Prebuilt **`.deb`** and **`.AppImage`** packages are on the [Releases](https://g
 sudo apt install ./SenseCenter_0.1.0_amd64.deb
 ```
 
+This also installs `lm-sensors` if it's missing.
+
 **AppImage (any distro)**
 
 ```bash
+sudo apt install lm-sensors   # or your distro's equivalent
 chmod +x SenseCenter_0.1.0_amd64.AppImage
 ./SenseCenter_0.1.0_amd64.AppImage
 ```
@@ -47,6 +50,7 @@ chmod +x SenseCenter_0.1.0_amd64.AppImage
 
 - The [linuwu-sense](https://github.com/0x7375646F/Linuwu-Sense) kernel module is installed and loaded
 - Your user is in the `linuwu_sense` group (log out and back in after you're added)
+- `lm-sensors` (`sudo apt install lm-sensors`). The startup check expects it, and the `.deb` installs it for you
 - Optional: `fwupd` for firmware updates, and the NVIDIA driver for GPU telemetry
 
 ## Supported devices
@@ -62,6 +66,12 @@ linuwu-sense supports your laptop, SenseCenter will too. If a feature isn't
 exposed by the driver on your model, that control won't be available in SenseCenter.
 
 SenseCenter has been tested on an Acer Predator PHN16-71 (RTX 4050) running Ubuntu 26.04.
+
+## Good to know
+
+- **Settings after a reboot:** SenseCenter saves your control settings (fan mode, RGB, battery limiter and the toggles) and reapplies them the first time it opens after each boot. **You need to open the app for them to come back**; until then, the laptop uses the firmware defaults. To have this happen automatically, turn on *Launch SenseCenter at System Login* (Controls → System Daemon & Autostart). The thermal profile, screen brightness and wireless radios aren't reapplied.
+- **Low resource use when idle:** telemetry is only polled while the Monitor tab is open and the window is visible. When the app is minimized, sitting in the tray or on another tab, it stops polling and does almost nothing.
+- **Lag or stutter:** this shouldn't happen, but if the app feels slow, set the polling interval on the Monitor tab to **5s**. Your choice is remembered.
 
 ## Building from source
 

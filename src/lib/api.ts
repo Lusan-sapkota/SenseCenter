@@ -22,8 +22,40 @@ export async function readControl(name: string): Promise<string> {
   return invoke<string>("read_control", { name });
 }
 
+const SAVED_CONTROLS_KEY = "sensecenter:saved-controls";
+const LAST_RESTORE_BOOT_KEY = "sensecenter:last-restore-boot";
+const ONE_SHOT_CONTROLS = new Set(["battery_calibration"]);
+
+function savedControls(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_CONTROLS_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
 export async function writeControl(name: string, value: string): Promise<void> {
-  return invoke("write_control", { name, value });
+  await invoke("write_control", { name, value });
+  if (ONE_SHOT_CONTROLS.has(name)) return;
+  try {
+    localStorage.setItem(SAVED_CONTROLS_KEY, JSON.stringify({ ...savedControls(), [name]: value }));
+  } catch {
+    // settings just won't survive a reboot
+  }
+}
+
+// Reapplies saved controls once per boot, so Fn-key changes made later in the session aren't reverted.
+export async function restoreSavedControls(): Promise<void> {
+  const bootId = await invoke<string>("get_boot_id").catch(() => "");
+  try {
+    if (!bootId || localStorage.getItem(LAST_RESTORE_BOOT_KEY) === bootId) return;
+    localStorage.setItem(LAST_RESTORE_BOOT_KEY, bootId);
+  } catch {
+    return;
+  }
+  for (const [name, value] of Object.entries(savedControls())) {
+    await invoke("write_control", { name, value }).catch(() => undefined);
+  }
 }
 
 export async function getTelemetry(): Promise<TelemetrySnapshot> {

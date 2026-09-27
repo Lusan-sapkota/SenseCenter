@@ -39,7 +39,7 @@ npm run tauri dev
   ```
 - Follow the code style in [AGENTS.md](AGENTS.md): at most one comment line per function, and only where the code isn't obvious.
 - Read [DESIGN.md](DESIGN.md) before changing sysfs paths or permission handling.
-- Keep each pull request to one change, and add an entry under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md).
+- Keep each pull request to one change, and describe the change in the pull request so it can go into [CHANGELOG.md](CHANGELOG.md).
 - Features that need root must fail gracefully without it. Never panic.
 
 ## Licensing

@@ -127,6 +127,18 @@ export const RgbControl = memo(function RgbControl({ disabled }: RgbControlProps
         }
       })
       .catch(() => undefined);
+    readControl("four_zoned_kb/four_zone_mode")
+      .then((value) => {
+        const parts = value.trim().split(",").map(Number);
+        if (parts.length !== 7 || parts.some((n) => !Number.isInteger(n))) return;
+        const [m, s, b, d, r, g, bl] = parts;
+        setMode(String(m));
+        setSpeed(s);
+        setEffectBrightness(b);
+        if (DIRECTIONS.some((x) => x.value === String(d))) setDirection(String(d));
+        setEffectColor(`#${[r, g, bl].map((c) => c.toString(16).padStart(2, "0")).join("")}`);
+      })
+      .catch(() => undefined);
   }, []);
 
   const applyZones = async () => {

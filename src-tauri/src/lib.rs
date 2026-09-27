@@ -58,6 +58,13 @@ async fn get_startup_status() -> AppResult<StartupStatus> {
 }
 
 #[tauri::command]
+fn get_boot_id() -> String {
+    std::fs::read_to_string("/proc/sys/kernel/random/boot_id")
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default()
+}
+
+#[tauri::command]
 fn read_control(name: String) -> AppResult<String> {
     let device = model::detect_device()?;
     sysfs::read_control(&device.sense_base_path, &name)
@@ -209,6 +216,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_startup_status,
+            get_boot_id,
             read_control,
             write_control,
             get_telemetry,
