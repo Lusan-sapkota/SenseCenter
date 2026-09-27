@@ -2,8 +2,8 @@ import { memo, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
+  KeyRound,
   Loader2,
-  Lock,
   RefreshCw,
   ShieldAlert,
 } from "lucide-react";
@@ -28,22 +28,31 @@ function StatusPill({
   label: string;
   warn?: boolean;
 }) {
+  const stateColor = ok
+    ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30"
+    : warn
+      ? "text-amber-400 bg-amber-500/10 border-amber-500/30"
+      : "text-rose-400 bg-rose-500/10 border-rose-500/30";
+
+  const dotColor = ok
+    ? "bg-emerald-400"
+    : warn
+      ? "bg-amber-400"
+      : "bg-rose-500";
+
   return (
-    <div
-      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-        ok
-          ? "bg-brand-teal/15 text-brand-teal"
-          : warn
-            ? "bg-chart-4/15 text-[color:var(--chart-4)]"
-            : "bg-destructive/15 text-destructive"
-      }`}
-    >
-      <div
-        className={`size-1.5 rounded-full ${
-          ok ? "bg-brand-teal" : warn ? "bg-[color:var(--chart-4)]" : "bg-destructive"
-        }`}
-      />
-      {label}
+    <div className="inline-flex items-stretch overflow-hidden rounded-md border border-white/[0.08] bg-[#070A11] shadow-xs select-none">
+      <div className="flex items-center px-2 py-0.5 border-r border-white/[0.06] bg-white/[0.02]">
+        <span className="font-mono text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+          {label}
+        </span>
+      </div>
+      <div className={`flex items-center gap-1.5 px-2 py-0.5 ${stateColor}`}>
+        <span className={`size-1.5 rounded-full ${dotColor}`} />
+        <span className="font-mono text-[10px] font-bold tracking-wider">
+          {ok ? "ONLINE" : warn ? "WARN" : "OFFLINE"}
+        </span>
+      </div>
     </div>
   );
 }
@@ -79,9 +88,9 @@ export const StatusBanner = memo(function StatusBanner({
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap items-center gap-2">
         {loading && (
-          <Badge variant="secondary" className="gap-1">
-            <Loader2 className="size-3 animate-spin" />
-            Checking…
+          <Badge variant="outline" className="gap-1.5 border-brand-teal/40 bg-brand-teal/10 text-brand-teal">
+            <Loader2 className="size-3 animate-spin text-brand-teal" />
+            POLLING HARDWARE...
           </Badge>
         )}
         {!loading && status && (
@@ -89,38 +98,42 @@ export const StatusBanner = memo(function StatusBanner({
             <StatusPill ok={status.module_loaded} label="Module" />
             <StatusPill
               ok={status.in_linuwu_sense_group}
-              label="Permissions"
+              label="Perms"
               warn={status.module_loaded && !status.in_linuwu_sense_group}
             />
             <StatusPill ok={status.fwupd_available} label="fwupd" />
             {ready && (
-              <StatusPill ok label="Ready" />
+              <div className="hidden sm:inline-flex items-center gap-2 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 font-mono text-[10px] font-bold tracking-widest text-emerald-300 uppercase select-none">
+                <span className="size-1.5 rounded-full bg-emerald-400" />
+                SYSTEM READY
+              </div>
             )}
           </>
         )}
         {error && (
-          <Badge variant="destructive" className="gap-1">
+          <Badge variant="destructive" className="gap-1.5">
             <AlertCircle className="size-3" />
-            Startup error
+            SYSTEM FAULT
           </Badge>
         )}
         {unlockResult && (
-          <Badge variant={unlockResult === "Unlocked" ? "secondary" : "destructive"}>
-            {unlockResult === "Unlocked" ? (
-              <CheckCircle2 className="mr-1 size-3" />
-            ) : null}
+          <Badge
+            variant={unlockResult === "Unlocked" ? "emerald" : "destructive"}
+            className="gap-1.5"
+          >
+            {unlockResult === "Unlocked" && <CheckCircle2 className="size-3 text-emerald-400" />}
             {unlockResult === "Unlocked"
-              ? "Advanced features unlocked"
+              ? "Privileges Unlocked (Root sysfs enabled)"
               : unlockResult}
           </Badge>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         {!loading && status?.module_loaded && !status.in_linuwu_sense_group && (
-          <span className="hidden text-xs text-[color:var(--chart-4)] sm:inline">
-            <ShieldAlert className="mr-1 inline size-3" />
-            Log out and back in after joining linuwu_sense group
+          <span className="hidden text-xs font-mono text-amber-400 sm:inline flex items-center gap-1">
+            <ShieldAlert className="inline size-3.5" />
+            Re-login required for linuwu_sense group
           </span>
         )}
         <Button
@@ -128,17 +141,24 @@ export const StatusBanner = memo(function StatusBanner({
           size="sm"
           onClick={() => void handleUnlock()}
           disabled={unlocking}
+          className="border-white/10 bg-white/[0.03] hover:bg-brand-violet/20 hover:border-brand-violet/40 hover:text-white transition-all shadow-sm"
         >
           {unlocking ? (
-            <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+            <Loader2 className="mr-1.5 size-3.5 animate-spin text-brand-violet" />
           ) : (
-            <Lock className="mr-1.5 size-3.5" />
+            <KeyRound className="mr-1.5 size-3.5 text-brand-violet" />
           )}
-          Unlock
+          <span className="font-mono text-xs tracking-wider">Elevate</span>
         </Button>
-        <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
-          <RefreshCw className={`mr-1.5 size-3.5 ${loading ? "animate-spin" : ""}`} />
-          Refresh
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRefresh}
+          disabled={loading}
+          className="border-white/10 bg-white/[0.03] hover:bg-brand-teal/20 hover:border-brand-teal/40 hover:text-white transition-all shadow-sm"
+        >
+          <RefreshCw className={`mr-1.5 size-3.5 text-brand-teal ${loading ? "animate-spin" : ""}`} />
+          <span className="font-mono text-xs tracking-wider">Refresh</span>
         </Button>
       </div>
     </div>

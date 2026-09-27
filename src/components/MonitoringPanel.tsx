@@ -1,7 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Activity,
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   Fan,
   Gauge,
@@ -65,7 +67,7 @@ function GaugeLink({
       type="button"
       onClick={onClick}
       aria-label={`Jump to ${label}`}
-      className="cursor-pointer rounded-2xl transition-transform duration-200 hover:scale-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group relative cursor-pointer rounded-2xl p-2 transition-colors duration-150 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal"
     >
       {children}
     </button>
@@ -84,17 +86,17 @@ function StatBlock({
   color?: string;
 }) {
   return (
-    <div className="rounded-lg bg-muted/30 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-black/30 p-3.5 shadow-inner transition-colors duration-150 hover:border-white/10 hover:bg-black/40">
+      <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
       <p
-        className="mt-1 font-mono text-xl font-semibold tabular-nums transition-colors duration-300"
+        className="mt-1 font-mono text-xl font-bold tabular-nums tracking-tight"
         style={color ? { color } : undefined}
       >
         {value}
       </p>
-      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+      {sub && <p className="mt-0.5 font-mono text-[11px] text-muted-foreground/80">{sub}</p>}
     </div>
   );
 }
@@ -107,7 +109,7 @@ interface MonitoringPanelProps {
   onPollMsChange: (pollMs: number) => void;
 }
 
-export function MonitoringPanel({
+export const MonitoringPanel = memo(function MonitoringPanel({
   snapshot,
   history,
   error,
@@ -155,90 +157,106 @@ export function MonitoringPanel({
         description={`Real-time hardware telemetry  polled every ${pollMs / 1000}s`}
         icon={Activity}
         action={
-          <Select value={String(pollMs)} onValueChange={(v) => v && onPollMsChange(Number(v))}>
-            <SelectTrigger size="sm" aria-label="Polling interval">
-              <SelectValue>
-                {(v: string) =>
-                  `Every ${POLL_INTERVAL_OPTIONS.find((o) => o.value === v)?.label ?? `${Number(v) / 1000}s`}`
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {POLL_INTERVAL_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline font-mono text-xs text-muted-foreground uppercase tracking-wider">
+              Sample Rate:
+            </span>
+            <Select value={String(pollMs)} onValueChange={(v) => v && onPollMsChange(Number(v))}>
+              <SelectTrigger size="sm" aria-label="Polling interval" className="font-mono text-xs border-white/10 bg-white/[0.04]">
+                <SelectValue>
+                  {(v: string) =>
+                    `${POLL_INTERVAL_OPTIONS.find((o) => o.value === v)?.label ?? `${Number(v) / 1000}s`}`
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="border-white/10 bg-[#0E131F] font-mono text-xs">
+                {POLL_INTERVAL_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    Every {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       />
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="border-rose-500/30 bg-rose-500/10 font-mono text-xs">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       <div
-        className="glass-panel flex flex-wrap items-center justify-around gap-4 p-5"
+        className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#0F1422] to-[#0A0D15] p-6 shadow-[0_8px_30px_-6px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.08)]"
         aria-busy={snapshot == null}
       >
-        {snapshot == null ? (
-          <>
-            <GaugeSkeleton label="CPU Temp" size={96} />
-            <GaugeSkeleton label="GPU Temp" size={96} />
-            <GaugeSkeleton label="RAM" size={96} />
-            <GaugeSkeleton label="CPU Usage" size={96} />
-          </>
-        ) : (
-          <>
-            <GaugeLink onClick={jumpToSensors} label="all temperature sensors">
-              <GaugeRing
-                value={cpuTemp ?? 0}
-                max={100}
-                label="CPU Temp"
-                unit="°C"
-                size={96}
-                color={cpuTemp != null ? tempColor(cpuTemp) : "var(--brand-teal)"}
-                valueColor={cpuTemp != null ? tempColor(cpuTemp) : undefined}
-              />
-            </GaugeLink>
-            <GaugeLink onClick={jumpToGpuDetails} label="GPU details">
-              <GaugeRing
-                value={gpuTemp ?? 0}
-                max={100}
-                label="GPU Temp"
-                unit="°C"
-                size={96}
-                color={gpuTemp != null ? tempColor(gpuTemp) : "var(--brand-violet)"}
-                valueColor={gpuTemp != null ? tempColor(gpuTemp) : undefined}
-              />
-            </GaugeLink>
-            <GaugeLink onClick={jumpToMemory} label="memory details">
-              <GaugeRing
-                value={memUsedPct ?? 0}
-                max={100}
-                label="RAM"
-                unit="%"
-                size={96}
-                color={memUsedPct != null ? usageColor(memUsedPct) : "var(--brand-teal)"}
-                valueColor={memUsedPct != null ? usageColor(memUsedPct) : undefined}
-              />
-            </GaugeLink>
-            <GaugeLink onClick={jumpToChart} label="temperature history">
-              <GaugeRing
-                value={cpuLoad ?? 0}
-                max={100}
-                label="CPU Usage"
-                unit="%"
-                size={96}
-                color={cpuLoad != null ? loadColor(cpuLoad) : "var(--brand-violet)"}
-                valueColor={cpuLoad != null ? loadColor(cpuLoad) : undefined}
-              />
-            </GaugeLink>
-          </>
-        )}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,229,190,0.08),transparent_70%)]" />
+        <div className="relative grid grid-cols-2 gap-4 sm:grid-cols-4 sm:divide-x sm:divide-white/[0.06]">
+          {snapshot == null ? (
+            <>
+              <div className="flex justify-center"><GaugeSkeleton label="CPU Temp" size={110} /></div>
+              <div className="flex justify-center sm:pl-4"><GaugeSkeleton label="GPU Temp" size={110} /></div>
+              <div className="flex justify-center sm:pl-4"><GaugeSkeleton label="RAM" size={110} /></div>
+              <div className="flex justify-center sm:pl-4"><GaugeSkeleton label="CPU Usage" size={110} /></div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-center">
+                <GaugeLink onClick={jumpToSensors} label="all temperature sensors">
+                  <GaugeRing
+                    value={cpuTemp ?? 0}
+                    max={100}
+                    label="CPU Temp"
+                    unit="°C"
+                    size={110}
+                    color={cpuTemp != null ? tempColor(cpuTemp) : "var(--brand-teal)"}
+                    valueColor={cpuTemp != null ? tempColor(cpuTemp) : undefined}
+                  />
+                </GaugeLink>
+              </div>
+              <div className="flex justify-center sm:pl-4">
+                <GaugeLink onClick={jumpToGpuDetails} label="GPU details">
+                  <GaugeRing
+                    value={gpuTemp ?? 0}
+                    max={100}
+                    label="GPU Temp"
+                    unit="°C"
+                    size={110}
+                    color={gpuTemp != null ? tempColor(gpuTemp) : "var(--brand-violet)"}
+                    valueColor={gpuTemp != null ? tempColor(gpuTemp) : undefined}
+                  />
+                </GaugeLink>
+              </div>
+              <div className="flex justify-center sm:pl-4">
+                <GaugeLink onClick={jumpToMemory} label="memory details">
+                  <GaugeRing
+                    value={memUsedPct ?? 0}
+                    max={100}
+                    label="RAM"
+                    unit="%"
+                    size={110}
+                    color={memUsedPct != null ? usageColor(memUsedPct) : "var(--brand-teal)"}
+                    valueColor={memUsedPct != null ? usageColor(memUsedPct) : undefined}
+                  />
+                </GaugeLink>
+              </div>
+              <div className="flex justify-center sm:pl-4">
+                <GaugeLink onClick={jumpToChart} label="temperature history">
+                  <GaugeRing
+                    value={cpuLoad ?? 0}
+                    max={100}
+                    label="CPU Usage"
+                    unit="%"
+                    size={110}
+                    color={cpuLoad != null ? loadColor(cpuLoad) : "var(--brand-violet)"}
+                    valueColor={cpuLoad != null ? loadColor(cpuLoad) : undefined}
+                  />
+                </GaugeLink>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <PanelCard
@@ -248,13 +266,16 @@ export function MonitoringPanel({
         id="chart-section"
         action={
           snapshot?.cpu.freq_mhz != null ? (
-            <span className="font-mono text-xs tabular-nums text-muted-foreground">
-              {(snapshot.cpu.freq_mhz / 1000).toFixed(2)} GHz
-            </span>
+            <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1">
+              <span className="size-1.5 rounded-full bg-brand-teal" />
+              <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                {(snapshot.cpu.freq_mhz / 1000).toFixed(2)} GHz
+              </span>
+            </div>
           ) : undefined
         }
       >
-        <div className="h-56">
+        <div className="h-60 w-full pt-2">
           <TemperatureChart history={history} />
         </div>
       </PanelCard>
@@ -262,11 +283,20 @@ export function MonitoringPanel({
       {snapshot?.gpu && (
         <PanelCard
           id="gpu-details-section"
-          title="GPU Details"
+          title="GPU Telemetry Matrix"
           description="NVML readout  laptop GPU fan speed is EC-controlled, not exposed by NVIDIA"
           icon={Gauge}
         >
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+            <StatBlock
+              label="Temperature"
+              value={
+                snapshot.gpu.temp_c != null ? `${snapshot.gpu.temp_c.toFixed(0)}°C` : ""
+              }
+              color={
+                snapshot.gpu.temp_c != null ? tempColor(snapshot.gpu.temp_c) : undefined
+              }
+            />
             <StatBlock
               label="Utilization"
               value={
@@ -277,6 +307,24 @@ export function MonitoringPanel({
                   ? usageColor(snapshot.gpu.utilization_pct)
                   : undefined
               }
+            />
+            <StatBlock
+              label="Graphics Clock"
+              value={
+                snapshot.gpu.clock_graphics_mhz != null
+                  ? `${snapshot.gpu.clock_graphics_mhz} MHz`
+                  : ""
+              }
+            />
+            <StatBlock
+              label="VRAM Allocation"
+              value={vramPct != null ? `${vramPct}%` : ""}
+              sub={
+                snapshot.gpu.memory_used_mib != null && snapshot.gpu.memory_total_mib
+                  ? `${snapshot.gpu.memory_used_mib} / ${snapshot.gpu.memory_total_mib} MiB`
+                  : undefined
+              }
+              color={vramPct != null ? usageColor(vramPct) : undefined}
             />
             <StatBlock
               label="Power Draw"
@@ -300,59 +348,71 @@ export function MonitoringPanel({
                   : undefined
               }
             />
-            <StatBlock
-              label="Graphics Clock"
-              value={
-                snapshot.gpu.clock_graphics_mhz != null
-                  ? `${snapshot.gpu.clock_graphics_mhz} MHz`
-                  : ""
-              }
-            />
-            <StatBlock
-              label="VRAM"
-              value={vramPct != null ? `${vramPct}%` : ""}
-              sub={
-                snapshot.gpu.memory_used_mib != null && snapshot.gpu.memory_total_mib
-                  ? `${snapshot.gpu.memory_used_mib} / ${snapshot.gpu.memory_total_mib} MiB`
-                  : undefined
-              }
-              color={vramPct != null ? usageColor(vramPct) : undefined}
-            />
           </div>
         </PanelCard>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <PanelCard title="Cooling" icon={Fan}>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <PanelCard title="Active Cooling Tachometers" icon={Fan}>
           {snapshot && snapshot.fans.length > 0 ? (
             <div className="space-y-4">
               {snapshot.fans.map((fan) => {
                 const pct = Math.min((fan.value / 6000) * 100, 100);
                 const color = fanColor(fan.value);
+                const isSpinning = fan.value > 0;
                 return (
-                  <ProgressBar
+                  <div
                     key={`${fan.chip}-${fan.label}`}
-                    label={fan.label}
-                    detail={`${fan.value.toFixed(0)} RPM`}
-                    value={pct}
-                    color={color}
-                    detailColor={color}
-                  />
+                    className="rounded-xl border border-white/[0.05] bg-black/20 p-4 transition-colors duration-150 hover:border-white/10"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative flex size-8 items-center justify-center rounded-lg bg-white/[0.04]">
+                          <Fan
+                            className={cn(
+                              "size-4",
+                              isSpinning ? "text-brand-teal" : "text-muted-foreground",
+                            )}
+                          />
+                        </div>
+                        <div>
+                          <p className="font-mono text-sm font-semibold text-foreground">{fan.label}</p>
+                          <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">{fan.chip}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className="font-mono text-base font-bold tabular-nums"
+                          style={{ color }}
+                        >
+                          {fan.value.toFixed(0)} RPM
+                        </span>
+                        <p className="font-mono text-[10px] text-muted-foreground">
+                          {pct.toFixed(0)}% DUTY
+                        </p>
+                      </div>
+                    </div>
+                    <ProgressBar
+                      value={pct}
+                      color={color}
+                      detailColor={color}
+                    />
+                  </div>
                 );
               })}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No fan sensors reported.</p>
+            <p className="font-mono text-xs text-muted-foreground">No fan sensors reported.</p>
           )}
         </PanelCard>
 
         <PanelCard
-          title="Power Sources"
+          title="Power Distribution"
           icon={Zap}
           action={
             totalPowerW ? (
               <span
-                className="font-mono text-sm font-semibold tabular-nums"
+                className="font-mono text-sm font-bold tabular-nums"
                 style={{ color: powerColor(totalPowerW) }}
               >
                 {totalPowerW.toFixed(1)} W total
@@ -367,11 +427,14 @@ export function MonitoringPanel({
                 return (
                   <div
                     key={`${p.chip}-${p.label}`}
-                    className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5"
+                    className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-black/25 px-4 py-3 transition-colors hover:border-white/10"
                   >
-                    <span className="text-sm font-medium">{p.label}</span>
+                    <div className="flex items-center gap-2">
+                      <Zap className="size-3.5 text-muted-foreground" />
+                      <span className="font-mono text-xs font-medium text-foreground">{p.label}</span>
+                    </div>
                     <span
-                      className="font-mono text-sm tabular-nums transition-colors duration-300"
+                      className="font-mono text-sm font-bold tabular-nums"
                       style={{ color }}
                     >
                       {p.value.toFixed(1)} W
@@ -381,19 +444,19 @@ export function MonitoringPanel({
               })}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="font-mono text-xs text-muted-foreground">
               No power sensors  unlock advanced features for CPU package power.
             </p>
           )}
         </PanelCard>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <PanelCard id="memory-section" title="Memory" icon={MemoryStick}>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <PanelCard id="memory-section" title="Memory Allocation" icon={MemoryStick}>
           {memory ? (
             <div className="space-y-4">
               <ProgressBar
-                label="RAM"
+                label="Physical RAM"
                 detail={`${formatKib(memUsedKib)} / ${formatKib(memory.total_kib)} (${memUsedPct}%)`}
                 value={memUsedPct ?? 0}
               />
@@ -417,18 +480,20 @@ export function MonitoringPanel({
                 />
               )}
               {snapshot?.cpu.governor && (
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>CPU Governor</span>
-                  <span className="font-mono">{snapshot.cpu.governor}</span>
+                <div className="flex items-center justify-between border-t border-white/[0.05] pt-3 text-xs text-muted-foreground">
+                  <span className="font-mono text-[11px] uppercase tracking-wider">CPU Governor</span>
+                  <span className="font-mono text-xs font-semibold text-brand-teal bg-brand-teal/10 border border-brand-teal/20 rounded px-2 py-0.5">
+                    {snapshot.cpu.governor}
+                  </span>
                 </div>
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No memory data reported.</p>
+            <p className="font-mono text-xs text-muted-foreground">No memory data reported.</p>
           )}
         </PanelCard>
 
-        <PanelCard title="Storage & Disk I/O" icon={HardDrive}>
+        <PanelCard title="Storage Volumes & Disk I/O" icon={HardDrive}>
           <div className="space-y-4">
             {snapshot && snapshot.disk_space.length > 0 && (
               <div className="space-y-3">
@@ -437,7 +502,7 @@ export function MonitoringPanel({
                   return (
                     <ProgressBar
                       key={d.mount}
-                      label={d.mount}
+                      label={`Mount: ${d.mount}`}
                       detail={`${formatBytes(d.used_bytes)} / ${formatBytes(d.total_bytes)} (${pct}%)`}
                       value={pct}
                     />
@@ -446,46 +511,56 @@ export function MonitoringPanel({
               </div>
             )}
             {snapshot && snapshot.disks.length > 0 ? (
-              <div className="space-y-2 border-t border-border/40 pt-3">
+              <div className="space-y-2 border-t border-white/[0.06] pt-3">
                 {snapshot.disks.map((disk) => (
                   <div
                     key={disk.device}
-                    className="flex items-center justify-between text-sm"
+                    className="flex items-center justify-between rounded-lg bg-black/20 px-3 py-2 text-sm"
                   >
-                    <span className="font-medium">{disk.device}</span>
+                    <span className="font-mono text-xs font-semibold text-foreground/90">{disk.device}</span>
                     <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                      ↓ {formatRate(disk.read_bytes_per_sec)} · ↑{" "}
-                      {formatRate(disk.write_bytes_per_sec)}
+                      <span className="text-emerald-400">↓ {formatRate(disk.read_bytes_per_sec)}</span> ·{" "}
+                      <span className="text-sky-400">↑ {formatRate(disk.write_bytes_per_sec)}</span>
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Collecting I/O samples…</p>
+              <p className="font-mono text-xs text-muted-foreground">Collecting I/O samples…</p>
             )}
           </div>
         </PanelCard>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
-        <PanelCard title="Network" icon={Network}>
+      <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
+        <PanelCard title="Network Interfaces" icon={Network}>
           {snapshot && snapshot.network.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {snapshot.network.map((net) => (
                 <div
                   key={net.interface}
-                  className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5"
+                  className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-black/25 px-4 py-2.5"
                 >
-                  <span className="text-sm font-medium">{net.interface}</span>
-                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                    ↓ {formatRate(net.rx_bytes_per_sec)} · ↑{" "}
-                    {formatRate(net.tx_bytes_per_sec)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-brand-teal" />
+                    <span className="font-mono text-xs font-semibold text-foreground">{net.interface}</span>
+                  </div>
+                  <div className="flex items-center gap-3 font-mono text-xs tabular-nums">
+                    <span className="flex items-center gap-1 text-emerald-400">
+                      <ArrowDown className="size-3" />
+                      {formatRate(net.rx_bytes_per_sec)}
+                    </span>
+                    <span className="text-white/20">|</span>
+                    <span className="flex items-center gap-1 text-sky-400">
+                      <ArrowUp className="size-3" />
+                      {formatRate(net.tx_bytes_per_sec)}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Collecting samples…</p>
+            <p className="font-mono text-xs text-muted-foreground">Collecting network samples…</p>
           )}
         </PanelCard>
 
@@ -493,7 +568,7 @@ export function MonitoringPanel({
           icon={Activity}
           label="Uptime"
           value={snapshot?.uptime_secs != null ? formatUptime(snapshot.uptime_secs) : ""}
-          className="h-full min-w-45"
+          className="h-full min-w-48"
         />
       </div>
 
@@ -506,7 +581,7 @@ export function MonitoringPanel({
       )}
     </div>
   );
-}
+});
 
 function SensorDisclosure({
   temps,
@@ -518,38 +593,38 @@ function SensorDisclosure({
   onOpenChange: (open: boolean) => void;
 }) {
   return (
-    <div id="sensors-section" className="glass-panel overflow-hidden">
+    <div id="sensors-section" className="glass-panel overflow-hidden border-white/[0.08]">
       <button
         type="button"
         onClick={() => onOpenChange(!open)}
-        className="flex w-full cursor-pointer items-center justify-between gap-3 px-5 py-4 text-left"
+        className="flex w-full cursor-pointer items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
       >
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-7 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
-            <Thermometer className="size-3.5" />
+        <div className="flex items-center gap-3">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-white/[0.04] text-brand-teal ring-1 ring-white/10">
+            <Thermometer className="size-4" />
           </div>
           <div>
-            <h3 className="font-heading text-sm font-semibold">All Temperature Sensors</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">Full hwmon enumeration</p>
+            <h3 className="font-heading text-sm font-semibold tracking-wide text-foreground">All Hardware Temperature Sensors</h3>
+            <p className="font-mono text-[11px] text-muted-foreground">Full hwmon chip + coretemp enumeration</p>
           </div>
-          <Badge variant="secondary">{temps.length}</Badge>
+          <Badge variant="outline">{temps.length} SENSORS</Badge>
         </div>
         <ChevronDown
-          className={cn("size-4 text-muted-foreground transition-transform", open && "rotate-180")}
+          className={cn("size-4 text-muted-foreground transition-transform duration-200", open && "rotate-180")}
         />
       </button>
       {open && (
-        <div className="grid gap-x-8 border-t border-border/40 px-5 py-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-x-8 border-t border-white/[0.06] bg-black/20 p-5 sm:grid-cols-2 lg:grid-cols-3">
           {temps.map((t) => (
             <div
               key={`${t.chip}-${t.label}`}
-              className="flex items-center justify-between border-b border-border/30 py-2 text-sm"
+              className="flex items-center justify-between border-b border-white/[0.04] py-2 text-sm"
             >
-              <span className="truncate text-muted-foreground">
-                {t.chip} · {t.label}
+              <span className="truncate font-mono text-xs text-muted-foreground">
+                <span className="text-white/40">{t.chip} ·</span> {t.label}
               </span>
               <span
-                className="ml-2 shrink-0 font-mono tabular-nums transition-colors duration-300"
+                className="ml-2 shrink-0 font-mono text-xs font-semibold tabular-nums"
                 style={{ color: tempColor(t.value) }}
               >
                 {t.value.toFixed(1)}°C

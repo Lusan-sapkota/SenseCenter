@@ -1,8 +1,8 @@
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getTelemetry, tauriErrorMessage } from "@/lib/api";
 import type { TelemetryPoint, TelemetrySnapshot } from "@/types";
 
-const HISTORY_LIMIT = 60;
+const HISTORY_LIMIT = 40;
 
 export function useTelemetry(enabled: boolean, pollMs: number) {
   const [snapshot, setSnapshot] = useState<TelemetrySnapshot | null>(null);
@@ -52,10 +52,41 @@ export function useTelemetry(enabled: boolean, pollMs: number) {
   useEffect(() => {
     if (!enabled) return;
 
-    void poll();
-    const id = window.setInterval(() => void poll(), pollMs);
-    return () => window.clearInterval(id);
+    let id: number | null = null;
+
+    const start = () => {
+      if (id == null && !document.hidden) {
+        void poll();
+        id = window.setInterval(() => void poll(), pollMs);
+      }
+    };
+
+    const stop = () => {
+      if (id != null) {
+        window.clearInterval(id);
+        id = null;
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        start();
+      }
+    };
+
+    start();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [enabled, pollMs, poll]);
 
-  return { snapshot, history, error, refresh: poll };
+  return useMemo(
+    () => ({ snapshot, history, error, refresh: poll }),
+    [snapshot, history, error, poll],
+  );
 }

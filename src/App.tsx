@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StatusBanner } from "@/components/StatusBanner";
 import { ControlPanel } from "@/components/ControlPanel";
 import { MonitoringPanel } from "@/components/MonitoringPanel";
@@ -16,10 +16,11 @@ function App() {
   );
 
   const [pollMs, setPollMs] = usePollInterval();
-  const telemetry = useTelemetry(true, pollMs);
-
   const [section, setSection] = useState<NavSection>("monitor");
+  const telemetry = useTelemetry(section === "monitor", pollMs);
   const [depModalOpen, setDepModalOpen] = useState(false);
+
+  const handleRefresh = useCallback(() => void refresh(), [refresh]);
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
@@ -42,11 +43,11 @@ function App() {
             status={status}
             loading={loading}
             error={error}
-            onRefresh={() => void refresh()}
+            onRefresh={handleRefresh}
           />
         }
       >
-        {section === "monitor" && (
+        <div hidden={section !== "monitor"}>
           <MonitoringPanel
             snapshot={telemetry.snapshot}
             history={telemetry.history}
@@ -54,16 +55,16 @@ function App() {
             pollMs={pollMs}
             onPollMsChange={setPollMs}
           />
-        )}
+        </div>
         <div hidden={section !== "controls"}>
           <ControlPanel
             device={status?.device ?? null}
             controlsEnabled={controlsEnabled}
           />
         </div>
-        {section === "firmware" && (
+        <div hidden={section !== "firmware"}>
           <FirmwarePanel available={status?.fwupd_available ?? false} />
-        )}
+        </div>
       </AppShell>
 
       <DependencyModal

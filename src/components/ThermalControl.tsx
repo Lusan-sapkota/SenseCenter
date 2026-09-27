@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Flame, Leaf, Scale, Settings, VolumeX, Zap } from "lucide-react";
 import {
@@ -26,7 +26,14 @@ const profileIcons: Record<string, LucideIcon> = {
   quiet: VolumeX,
 };
 
-export function ThermalControl({ disabled }: ThermalControlProps) {
+const profileAccents: Record<string, { color: string; border: string }> = {
+  "power-saver": { color: "text-emerald-400", border: "border-emerald-500/40" },
+  balanced: { color: "text-brand-teal", border: "border-brand-teal/40" },
+  performance: { color: "text-amber-400", border: "border-amber-500/40" },
+  quiet: { color: "text-sky-400", border: "border-sky-500/40" },
+};
+
+export const ThermalControl = memo(function ThermalControl({ disabled }: ThermalControlProps) {
   const [available, setAvailable] = useState(false);
   const [profiles, setProfiles] = useState<string[]>([]);
   const [current, setCurrent] = useState<string | null>(null);
@@ -65,14 +72,19 @@ export function ThermalControl({ disabled }: ThermalControlProps) {
 
   return (
     <PanelCard
-      title="Thermal Profile"
-      description="Kernel platform-profile switch for models without a physical performance key"
+      title="Platform Thermal Profile"
+      description="Linux ACPI platform-profile switch for CPU/GPU governor and cooling tables"
       icon={Flame}
     >
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {profiles.map((profile) => {
           const active = current === profile;
           const Icon = profileIcons[profile] ?? Settings;
+          const styling = profileAccents[profile] ?? {
+            color: "text-brand-violet",
+            border: "border-brand-violet/40",
+          };
+
           return (
             <button
               key={profile}
@@ -80,34 +92,41 @@ export function ThermalControl({ disabled }: ThermalControlProps) {
               disabled={disabled}
               onClick={() => void onSelect(profile)}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all",
+                "group relative flex cursor-pointer items-center gap-3.5 rounded-xl border p-4 text-left transition-colors duration-150 select-none",
                 active
-                  ? "border-brand-violet/50 bg-gradient-to-r from-brand-teal/10 to-brand-violet/10 ring-1 ring-brand-violet/30"
-                  : "border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40",
+                  ? cn("bg-[#141A27] ring-1", styling.border)
+                  : "border-white/[0.06] bg-black/25 hover:border-white/15 hover:bg-black/35",
                 disabled && "pointer-events-none opacity-50",
               )}
             >
               <div
                 className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-md",
+                  "flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors duration-150",
                   active
-                    ? "bg-brand-violet/20 text-brand-violet"
-                    : "bg-muted/60 text-muted-foreground",
+                    ? cn("bg-black/40", styling.color, styling.border)
+                    : "border-white/[0.06] bg-white/[0.03] text-muted-foreground group-hover:text-foreground",
                 )}
               >
-                <Icon className="size-4" />
+                <Icon className="size-5" />
               </div>
-              <div>
-                <p className="text-sm font-medium">{titleCase(profile)}</p>
-                {active && (
-                  <p className="text-[10px] text-brand-teal">Active</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-xs font-bold uppercase tracking-wider text-foreground">
+                  {titleCase(profile)}
+                </p>
+                {active ? (
+                  <div className="mt-1 flex items-center gap-1.5 font-mono text-[10px] font-semibold tracking-wider uppercase text-brand-teal">
+                    <span className="size-1.5 rounded-full bg-brand-teal" />
+                    ACTIVE PROFILE
+                  </div>
+                ) : (
+                  <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">Select Profile</p>
                 )}
               </div>
             </button>
           );
         })}
       </div>
-      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+      {error && <p className="mt-3 font-mono text-xs text-rose-400">{error}</p>}
     </PanelCard>
   );
-}
+});

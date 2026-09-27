@@ -1,8 +1,16 @@
-import { useEffect, useState } from "react";
-import { Loader2, Monitor, Power, Settings2, Usb, Wind } from "lucide-react";
+import { memo, useEffect, useState } from "react";
+import {
+  Loader2,
+  Monitor,
+  Palette,
+  Power,
+  Settings2,
+  Usb,
+  Wind,
+  Zap,
+} from "lucide-react";
 import { readControl, tauriErrorMessage, writeControl } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -114,13 +122,22 @@ function ToggleControl({
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/30 px-4 py-3.5 transition-colors hover:bg-muted/50">
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-white/[0.05] bg-black/25 px-4 py-3.5 transition-all hover:border-white/10 hover:bg-black/35">
       <div className="min-w-0 flex-1">
-        <Label htmlFor={name} className="text-sm font-medium">
-          {label}
-        </Label>
-        <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
-        {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+        <div className="flex items-center gap-2">
+          <span
+            className={`size-1.5 rounded-full transition-colors duration-150 ${
+              checked
+                ? "bg-brand-teal"
+                : "bg-white/20"
+            }`}
+          />
+          <Label htmlFor={name} className="cursor-pointer font-mono text-sm font-semibold tracking-wide text-foreground">
+            {label}
+          </Label>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground pl-3.5">{hint}</p>
+        {error && <p className="mt-1 text-xs font-mono text-rose-400 pl-3.5">{error}</p>}
       </div>
       {loading ? (
         <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
@@ -148,7 +165,7 @@ function ToggleGroup({
   const active = names.filter((name) => hasControl(device, name));
   if (active.length === 0) return null;
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {active.map((name) => (
         <ToggleControl
           key={name}
@@ -236,36 +253,53 @@ function FanControl({ disabled }: { disabled: boolean }) {
 
   return (
     <PanelCard
-      title="Fan Control"
-      description="Auto (0), Max (100), or custom CPU/GPU percentages"
+      title="Active Fan Curves & Cooling"
+      description="Direct write to linuwu_sense fan_speed sysfs node"
       icon={Wind}
     >
       <div className="space-y-5">
         {loading ? (
-          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+            <Loader2 className="size-4 animate-spin text-brand-teal" />
+            Querying active cooling state...
+          </div>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {(["auto", "max", "custom"] as FanMode[]).map((mode) => (
-              <Button
-                key={mode}
-                variant={fanMode === mode ? "default" : "outline"}
-                size="sm"
-                disabled={disabled}
-                aria-pressed={fanMode === mode}
-                onClick={() => void setFanModeAndApply(mode)}
-                className="min-w-18 capitalize"
-              >
-                {mode}
-              </Button>
-            ))}
+          <div className="grid grid-cols-3 gap-3">
+            {(["auto", "max", "custom"] as FanMode[]).map((mode) => {
+              const isActive = fanMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  disabled={disabled}
+                  aria-pressed={isActive}
+                  onClick={() => void setFanModeAndApply(mode)}
+                  className={`group relative flex flex-col items-center justify-center rounded-xl border p-4 text-center transition-colors duration-150 ${
+                    isActive
+                      ? mode === "max"
+                        ? "border-amber-500/50 bg-[#1A1820] text-amber-300 ring-1 ring-amber-500/40"
+                        : "border-brand-teal/50 bg-[#121A24] text-brand-teal ring-1 ring-brand-teal/40"
+                      : "border-white/[0.06] bg-black/25 text-muted-foreground hover:border-white/15 hover:bg-black/35 hover:text-foreground"
+                  } ${disabled ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                >
+                  {mode === "auto" && <Wind className="mb-2 size-5" />}
+                  {mode === "max" && <Zap className="mb-2 size-5" />}
+                  {mode === "custom" && <Settings2 className="mb-2 size-5" />}
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider">{mode}</span>
+                  <span className="mt-0.5 text-[10px] text-muted-foreground">
+                    {mode === "auto" ? "Dynamic EC" : mode === "max" ? "100% Throttle" : "Bespoke %"}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
         {fanMode === "custom" && (
-          <div className="space-y-5 rounded-lg bg-muted/20 p-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">CPU Fan</span>
-                <span className="font-mono tabular-nums text-brand-teal">{cpuFan}%</span>
+          <div className="space-y-5 rounded-xl border border-white/[0.06] bg-black/30 p-5">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="font-medium text-foreground">CPU Fan Speed Target</span>
+                <span className="font-bold tabular-nums text-brand-teal">{cpuFan}%</span>
               </div>
               <Slider
                 value={[cpuFan]}
@@ -279,10 +313,10 @@ function FanControl({ disabled }: { disabled: boolean }) {
                 }}
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">GPU Fan</span>
-                <span className="font-mono tabular-nums text-brand-violet">{gpuFan}%</span>
+            <div className="space-y-2.5 border-t border-white/[0.05] pt-4">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="font-medium text-foreground">GPU Fan Speed Target</span>
+                <span className="font-bold tabular-nums text-brand-violet">{gpuFan}%</span>
               </div>
               <Slider
                 value={[gpuFan]}
@@ -298,13 +332,13 @@ function FanControl({ disabled }: { disabled: boolean }) {
             </div>
           </div>
         )}
-        {fanError && <p className="text-sm text-destructive">{fanError}</p>}
+        {fanError && <p className="font-mono text-xs text-rose-400">{fanError}</p>}
       </div>
     </PanelCard>
   );
 }
 
-export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
+export const ControlPanel = memo(function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
   const [usbValue, setUsbValue] = useState("0");
   const [usbError, setUsbError] = useState<string | null>(null);
   const system = useSystemInfo();
@@ -352,22 +386,36 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
       />
 
       {!controlsEnabled && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="border-amber-500/30 bg-amber-500/10 font-mono text-xs text-amber-300">
           <AlertDescription>
-            Controls are read-only until the module is loaded and group permissions are active.
+            Controls are read-only until the kernel module is active and linuwu_sense group privileges are loaded.
           </AlertDescription>
         </Alert>
       )}
 
       <Tabs defaultValue="performance">
-        <TabsList className="w-full sm:w-fit">
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="power">Power</TabsTrigger>
-          {hasRgb && <TabsTrigger value="lighting">Lighting</TabsTrigger>}
-          <TabsTrigger value="system">System</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 gap-1.5 sm:flex sm:w-fit">
+          <TabsTrigger value="performance">
+            <Zap className="size-3.5 text-brand-teal" />
+            <span>Performance</span>
+          </TabsTrigger>
+          <TabsTrigger value="power">
+            <Power className="size-3.5 text-amber-400" />
+            <span>Power</span>
+          </TabsTrigger>
+          {hasRgb && (
+            <TabsTrigger value="lighting">
+              <Palette className="size-3.5 text-brand-violet" />
+              <span>Lighting</span>
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="system">
+            <Settings2 className="size-3.5 text-sky-400" />
+            <span>System</span>
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="performance" className="space-y-4 pt-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
+        <TabsContent value="performance" className="space-y-5 pt-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
           {hasControl(device, "fan_speed") && (
             <FanControl disabled={!controlsEnabled} />
           )}
@@ -375,7 +423,7 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
           <ThermalControl disabled={!controlsEnabled} />
 
           {hasControl(device, "lcd_override") && (
-            <PanelCard title="Display" description="Latency tuning" icon={Monitor}>
+            <PanelCard title="Display Latency" description="Hardware LCD overdrive" icon={Monitor}>
               <ToggleGroup
                 device={device}
                 names={["lcd_override"]}
@@ -385,10 +433,10 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
           )}
         </TabsContent>
 
-        <TabsContent value="power" className="space-y-4 pt-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
+        <TabsContent value="power" className="space-y-5 pt-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
           {(hasControl(device, "battery_limiter") ||
             hasControl(device, "battery_calibration")) && (
-            <PanelCard title="Battery" description="linuwu-sense sysfs switches">
+            <PanelCard title="Battery Conservation" description="linuwu-sense sysfs switches">
               <ToggleGroup
                 device={device}
                 names={["battery_limiter", "battery_calibration"]}
@@ -403,27 +451,32 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
               description="Power USB ports when the laptop is shut down"
               icon={Usb}
             >
-              <Select
-                value={usbValue}
-                disabled={!controlsEnabled}
-                onValueChange={(v) => {
-                  if (v) void applyUsb(v);
-                }}
-              >
-                <SelectTrigger className="w-full max-w-xs">
-                  <SelectValue placeholder="Select level">
-                    {(v: string) => USB_CHARGING_LEVELS.find((l) => l.value === v)?.label ?? v}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {USB_CHARGING_LEVELS.map((l) => (
-                    <SelectItem key={l.value} value={l.value}>
-                      {l.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {usbError && <p className="mt-2 text-sm text-destructive">{usbError}</p>}
+              <div className="flex flex-wrap items-center gap-4">
+                <Select
+                  value={usbValue}
+                  disabled={!controlsEnabled}
+                  onValueChange={(v) => {
+                    if (v) void applyUsb(v);
+                  }}
+                >
+                  <SelectTrigger className="w-full max-w-xs font-mono text-xs border-white/10 bg-black/30">
+                    <SelectValue placeholder="Select level">
+                      {(v: string) => USB_CHARGING_LEVELS.find((l) => l.value === v)?.label ?? v}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-[#0E131F] font-mono text-xs">
+                    {USB_CHARGING_LEVELS.map((l) => (
+                      <SelectItem key={l.value} value={l.value}>
+                        {l.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="font-mono text-xs text-muted-foreground">
+                  Active threshold: {USB_CHARGING_LEVELS.find((l) => l.value === usbValue)?.label ?? usbValue}
+                </span>
+              </div>
+              {usbError && <p className="mt-2 font-mono text-xs text-rose-400">{usbError}</p>}
             </PanelCard>
           )}
 
@@ -436,10 +489,10 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
         </TabsContent>
 
         {hasRgb && (
-          <TabsContent value="lighting" className="space-y-4 pt-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
+          <TabsContent value="lighting" className="space-y-5 pt-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
             <RgbControl disabled={!controlsEnabled} />
             {hasControl(device, "backlight_timeout") && (
-              <PanelCard title="Keyboard Backlight" description="linuwu-sense sysfs switch">
+              <PanelCard title="Keyboard Backlight Timer" description="linuwu-sense sysfs switch">
                 <ToggleGroup
                   device={device}
                   names={["backlight_timeout"]}
@@ -450,9 +503,9 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
           </TabsContent>
         )}
 
-        <TabsContent value="system" className="space-y-4 pt-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
+        <TabsContent value="system" className="space-y-5 pt-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
           {hasControl(device, "boot_animation_sound") && (
-            <PanelCard title="Startup" description="linuwu-sense sysfs switch" icon={Power}>
+            <PanelCard title="BIOS Audio & Chime" description="linuwu-sense sysfs switch" icon={Power}>
               <ToggleGroup
                 device={device}
                 names={["boot_animation_sound"]}
@@ -474,4 +527,4 @@ export function ControlPanel({ device, controlsEnabled }: ControlPanelProps) {
       </Tabs>
     </div>
   );
-}
+});

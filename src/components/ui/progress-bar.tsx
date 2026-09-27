@@ -26,13 +26,13 @@ export const ProgressBar = memo(function ProgressBar({
   const textColor = detailColor ?? usageColor(pct);
 
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("space-y-1.5 select-none", className)}>
       {(label || detail) && (
         <div className="flex items-center justify-between text-xs">
-          {label && <span className="font-medium text-foreground">{label}</span>}
+          {label && <span className="font-mono text-[11px] font-medium tracking-wide text-foreground/90">{label}</span>}
           {detail && (
             <span
-              className="font-mono tabular-nums transition-colors duration-300"
+              className="font-mono text-[11px] font-bold tabular-nums transition-colors duration-300"
               style={{ color: textColor }}
             >
               {detail}
@@ -40,10 +40,13 @@ export const ProgressBar = memo(function ProgressBar({
           )}
         </div>
       )}
-      <div className="h-2 overflow-hidden rounded-full bg-border/50">
+      <div className="relative h-2 w-full overflow-hidden rounded-full border border-white/[0.06] bg-black/40 p-[1px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)]">
         <div
           className="h-full rounded-full transition-[width] duration-300 ease-out"
-          style={{ width: `${pct}%`, background: barColor }}
+          style={{
+            width: `${pct}%`,
+            background: barColor,
+          }}
         />
       </div>
     </div>
