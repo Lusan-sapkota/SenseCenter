@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Oldest supported Ubuntu, so the AppImage runs on older glibc too.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches app version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          app=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          [ "$tag" = "$app" ] || { echo "Tag v$tag doesn't match tauri.conf.json version $app"; exit 1; }
+
+      - name: Extract changelog
+        id: notes
+        run: |
+          awk -v v="${GITHUB_REF_NAME#v}" '/^## \[/{p = index($0, "## [" v "]") == 1; next} /^\[[^]]+\]: /{next} p' CHANGELOG.md > release-notes.md
+          [ -s release-notes.md ] || { echo "No CHANGELOG.md entry for ${GITHUB_REF_NAME#v}"; exit 1; }
+          { echo "body<<EOF"; cat release-notes.md; echo "EOF"; } >> "$GITHUB_OUTPUT"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: SenseCenter ${{ github.ref_name }}
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: true
+          args: --bundles deb,appimage
+
