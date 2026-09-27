@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-09-27
+
+### Added
+
+- In-app updates: *Check for updates* looks for a newer GitHub release. It then installs the `.deb` (one password prompt through `pkexec`) or replaces the AppImage in place, and restarts the app. Downloads are checked against GitHub's SHA-256 checksum before anything is installed
+- The `.deb` now depends on `curl`, which the updater uses
+
 ## [0.1.0] - 2026-09-27
 
 First public release.
@@ -28,4 +35,5 @@ First public release.
 - Control settings (fan mode, RGB, battery limiter, toggles) are saved and reapplied the first time the app opens after each boot
 - `.deb` and `.AppImage` packages
 
+[0.1.1]: https://github.com/Lusan-sapkota/SenseCenter/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Lusan-sapkota/SenseCenter/releases/tag/v0.1.0

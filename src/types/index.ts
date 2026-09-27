@@ -125,3 +125,11 @@ export interface BatteryHealth {
   cycle_count: number | null;
   health_pct: number | null;
 }
+
+export interface UpdateInfo {
+  current: string;
+  latest: string;
+  available: boolean;
+  can_install: boolean;
+  release_url: string;
+}

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Lusan-sapkota/SenseCenter/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/version-0.1.0-14b8a6" alt="Version 0.1.0"></a>
+  <a href="https://github.com/Lusan-sapkota/SenseCenter/releases/tag/v0.1.1"><img src="https://img.shields.io/badge/version-0.1.1-14b8a6" alt="Version 0.1.1"></a>
   <img src="https://img.shields.io/badge/platform-Linux-8b5cf6" alt="Platform: Linux">
   <img src="https://img.shields.io/badge/built%20with-Tauri%202-24c8db" alt="Built with Tauri 2">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue" alt="License: GPLv3"></a>
@@ -24,6 +24,7 @@ A native desktop app for Acer Predator/Nitro laptops, built on the [linuwu-sense
 - **Control**: thermal profiles, fan modes (Auto / Max / Custom), four-zone RGB keyboard (per-zone colors and effects), battery limiter/calibration and health, USB charging, LCD overdrive, boot animation sound, keyboard backlight timeout, screen brightness, wireless radio toggles
 - **Monitoring**: CPU/GPU temps and fan speeds, CPU usage and frequency, NVIDIA GPU usage/clocks/power, RAM and swap, disk I/O and space, network throughput
 - **Firmware**: fwupd device list, firmware updates, and the HSI security score
+- **Updates**: one-click in-app updates from GitHub releases, for both the `.deb` and the AppImage
 - **System**: tray icon (closing the window keeps the app in the tray), start on login, and a single `pkexec` prompt that unlocks the root-only controls for the current boot
 
 ## Download
@@ -33,7 +34,7 @@ Prebuilt **`.deb`** and **`.AppImage`** packages are on the [Releases](https://g
 **Debian / Ubuntu**
 
 ```bash
-sudo apt install ./SenseCenter_0.1.0_amd64.deb
+sudo apt install ./SenseCenter_0.1.1_amd64.deb
 ```
 
 This also installs `lm-sensors` if it's missing.
@@ -42,8 +43,8 @@ This also installs `lm-sensors` if it's missing.
 
 ```bash
 sudo apt install lm-sensors   # or your distro's equivalent
-chmod +x SenseCenter_0.1.0_amd64.AppImage
-./SenseCenter_0.1.0_amd64.AppImage
+chmod +x SenseCenter_0.1.1_amd64.AppImage
+./SenseCenter_0.1.1_amd64.AppImage
 ```
 
 ## Prerequisites
@@ -69,8 +70,9 @@ SenseCenter has been tested on an Acer Predator PHN16-71 (RTX 4050) running Ubun
 
 ## Good to know
 
-- **Settings after a reboot:** SenseCenter saves your control settings (fan mode, RGB, battery limiter and the toggles) and reapplies them the first time it opens after each boot. **You need to open the app for them to come back**; until then, the laptop uses the firmware defaults. To have this happen automatically, turn on *Launch SenseCenter at System Login* (Controls → System Daemon & Autostart). At login the app starts minimized to the system tray, with no window. It reapplies your settings and then sits idle until you open it from the tray. The thermal profile, screen brightness and wireless radios aren't reapplied.
+- **Settings after a reboot:** SenseCenter saves your control settings (fan mode, RGB, battery limiter and the toggles) and reapplies them the first time it opens after each boot. **You need to open the app for them to come back**; until then, the laptop uses the firmware defaults. To have this happen automatically, turn on *Launch SenseCenter at System Login* (Controls → System → System Daemon & Autostart). At login the app starts minimized to the system tray, with no window. It reapplies your settings and then sits idle until you open it from the tray. The thermal profile, screen brightness and wireless radios aren't reapplied.
 - **Low resource use when idle:** telemetry is only polled while the Monitor tab is open and the window is visible. When the app is minimized, sitting in the tray or on another tab, it stops polling and does almost nothing.
+- **Updates:** from 0.1.1 on, use *Check for updates* under Controls → System → Application Updates. The `.deb` asks for your password to install; the AppImage replaces itself. Both restart on the new version. If you're on 0.1.0, download 0.1.1 from Releases once.
 - **Lag or stutter:** this shouldn't happen, but if the app feels slow, set the polling interval on the Monitor tab to **5s**. Your choice is remembered.
 
 ## Building from source

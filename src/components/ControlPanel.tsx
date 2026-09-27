@@ -27,6 +27,7 @@ import { RgbControl } from "@/components/RgbControl";
 import { ThermalControl } from "@/components/ThermalControl";
 import {
   AutostartCard,
+  UpdateCard,
   BatteryHealthCard,
   BrightnessCard,
   RadiosCard,
@@ -523,6 +524,7 @@ export const ControlPanel = memo(function ControlPanel({ device, controlsEnabled
             autostartError={system.autostartError}
             toggleAutostart={system.toggleAutostart}
           />
+          <UpdateCard />
         </TabsContent>
       </Tabs>
     </div>

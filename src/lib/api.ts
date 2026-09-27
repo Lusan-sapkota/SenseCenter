@@ -6,6 +6,7 @@ import type {
   RadioInfo,
   StartupStatus,
   TelemetrySnapshot,
+  UpdateInfo,
 } from "@/types";
 
 export function tauriErrorMessage(error: unknown): string {
@@ -112,4 +113,12 @@ export async function getSecurityId(): Promise<string> {
 
 export async function unlockPrivileged(): Promise<void> {
   return invoke("unlock_privileged");
+}
+
+export async function checkForUpdate(): Promise<UpdateInfo> {
+  return invoke<UpdateInfo>("check_for_update");
+}
+
+export async function installUpdate(): Promise<void> {
+  return invoke("install_update");
 }

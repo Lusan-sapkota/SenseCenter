@@ -8,6 +8,7 @@ mod sysfs;
 mod system;
 mod telemetry;
 mod thermal;
+mod updater;
 
 use error::AppResult;
 use fwupd::FirmwareDevice;
@@ -55,6 +56,19 @@ async fn get_startup_status() -> AppResult<StartupStatus> {
         missing_dependencies,
         repo_url: deps::REPO_URL.to_string(),
     })
+}
+
+#[tauri::command]
+async fn check_for_update() -> AppResult<updater::UpdateInfo> {
+    updater::check().await
+}
+
+#[tauri::command]
+async fn install_update(app: tauri::AppHandle) -> AppResult<()> {
+    let exe = updater::install().await?;
+    std::process::Command::new(exe).spawn()?;
+    app.exit(0);
+    Ok(())
 }
 
 #[tauri::command]
@@ -224,6 +238,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_startup_status,
             get_boot_id,
+            check_for_update,
+            install_update,
             read_control,
             write_control,
             get_telemetry,

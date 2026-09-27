@@ -1,10 +1,15 @@
-import { BatteryCharging, Power, Sun, Wifi } from "lucide-react";
+import { useState } from "react";
+import { BatteryCharging, Download, Power, Sun, Wifi } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { PanelCard } from "@/components/layout/AppShell";
 import type { useSystemInfo } from "@/hooks/useSystemInfo";
+import { checkForUpdate, installUpdate, tauriErrorMessage } from "@/lib/api";
+import type { UpdateInfo } from "@/types";
 
 type SystemInfo = ReturnType<typeof useSystemInfo>;
 
@@ -143,6 +148,64 @@ export function AutostartCard({
         <Switch id="autostart-toggle" checked={autostart} onCheckedChange={toggleAutostart} />
       </div>
       {autostartError && <p className="mt-2 font-mono text-xs text-rose-400">{autostartError}</p>}
+    </PanelCard>
+  );
+}
+
+export function UpdateCard() {
+  const [info, setInfo] = useState<UpdateInfo | null>(null);
+  const [busy, setBusy] = useState<"checking" | "installing" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (kind: "checking" | "installing", task: () => Promise<void>) => {
+    setBusy(kind);
+    setError(null);
+    try {
+      await task();
+    } catch (err) {
+      setError(tauriErrorMessage(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const check = () => run("checking", async () => setInfo(await checkForUpdate()));
+  const install = () => run("installing", installUpdate);
+
+  const status = !info
+    ? "Check GitHub for a newer release"
+    : info.available
+      ? `Version ${info.latest} is available (you have ${info.current})`
+      : `You're on the latest version (${info.current})`;
+
+  return (
+    <PanelCard title="Application Updates" icon={Download}>
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-white/[0.05] bg-black/25 px-4 py-3.5">
+        <div>
+          <p className="font-mono text-xs font-semibold text-foreground">{status}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {busy === "installing"
+              ? "Downloading and installing. SenseCenter will restart when it's done"
+              : info?.available && !info.can_install
+                ? "This build can't update itself. Download the new version from GitHub."
+                : "The .deb update asks for your password; the AppImage updates in place"}
+          </p>
+        </div>
+        {info?.available && info.can_install ? (
+          <Button size="sm" disabled={busy != null} onClick={() => void install()} className="font-mono text-xs">
+            {busy === "installing" ? "Updating…" : `Update to ${info.latest}`}
+          </Button>
+        ) : info?.available ? (
+          <Button size="sm" variant="outline" onClick={() => void openUrl(info.release_url)} className="font-mono text-xs">
+            Open release page
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" disabled={busy != null} onClick={() => void check()} className="font-mono text-xs">
+            {busy === "checking" ? "Checking…" : "Check for updates"}
+          </Button>
+        )}
+      </div>
+      {error && <p className="mt-2 font-mono text-xs text-rose-400">{error}</p>}
     </PanelCard>
   );
 }
