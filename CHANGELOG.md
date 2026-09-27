@@ -23,7 +23,7 @@ First public release.
 - Startup check for lm-sensors and the linuwu-sense module
 - One-time `pkexec` unlock for root-only controls (lasts until reboot)
 - System tray icon: closing the window keeps the app in the tray
-- Option to start on login
+- Option to start on login: the app opens minimized to the tray, with no window
 - The polling interval and sidebar state are saved between restarts
 - Control settings (fan mode, RGB, battery limiter, toggles) are saved and reapplied the first time the app opens after each boot
 - `.deb` and `.AppImage` packages

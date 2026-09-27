@@ -202,10 +202,17 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            Some(vec!["--minimized"]),
         ))
         .setup(|app| {
+            use tauri::Manager;
             build_tray(app.handle())?;
+            // Login autostart passes --minimized so the app starts straight in the tray.
+            if !std::env::args().any(|a| a == "--minimized") {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.show()?;
+                }
+            }
             Ok(())
         })
         .on_window_event(|window, event| {

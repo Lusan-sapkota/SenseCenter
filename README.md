@@ -69,7 +69,7 @@ SenseCenter has been tested on an Acer Predator PHN16-71 (RTX 4050) running Ubun
 
 ## Good to know
 
-- **Settings after a reboot:** SenseCenter saves your control settings (fan mode, RGB, battery limiter and the toggles) and reapplies them the first time it opens after each boot. **You need to open the app for them to come back**; until then, the laptop uses the firmware defaults. To have this happen automatically, turn on *Launch SenseCenter at System Login* (Controls → System Daemon & Autostart). The thermal profile, screen brightness and wireless radios aren't reapplied.
+- **Settings after a reboot:** SenseCenter saves your control settings (fan mode, RGB, battery limiter and the toggles) and reapplies them the first time it opens after each boot. **You need to open the app for them to come back**; until then, the laptop uses the firmware defaults. To have this happen automatically, turn on *Launch SenseCenter at System Login* (Controls → System Daemon & Autostart). At login the app starts minimized to the system tray, with no window. It reapplies your settings and then sits idle until you open it from the tray. The thermal profile, screen brightness and wireless radios aren't reapplied.
 - **Low resource use when idle:** telemetry is only polled while the Monitor tab is open and the window is visible. When the app is minimized, sitting in the tray or on another tab, it stops polling and does almost nothing.
 - **Lag or stutter:** this shouldn't happen, but if the app feels slow, set the polling interval on the Monitor tab to **5s**. Your choice is remembered.
 
