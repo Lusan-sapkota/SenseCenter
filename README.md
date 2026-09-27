@@ -12,6 +12,7 @@
   <a href="https://github.com/Lusan-sapkota/SenseCenter/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/version-0.1.0-14b8a6" alt="Version 0.1.0"></a>
   <img src="https://img.shields.io/badge/platform-Linux-8b5cf6" alt="Platform: Linux">
   <img src="https://img.shields.io/badge/built%20with-Tauri%202-24c8db" alt="Built with Tauri 2">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue" alt="License: GPLv3"></a>
 </p>
 
 ---
@@ -48,7 +49,19 @@ chmod +x SenseCenter_0.1.0_amd64.AppImage
 - Your user is in the `linuwu_sense` group (log out and back in after you're added)
 - Optional: `fwupd` for firmware updates, and the NVIDIA driver for GPU telemetry
 
-Tested on an Acer Predator PHN16-71 (RTX 4050) running Ubuntu 26.04.
+## Supported devices
+
+SenseCenter doesn't talk to the hardware directly. It reads and writes the
+sysfs interface of the [linuwu-sense](https://github.com/0x7375646F/Linuwu-Sense)
+kernel module, and the module handles communication with the laptop's firmware.
+Which laptops work, and which features each one gets, is decided by the driver.
+
+**Before you install, check the supported models list in the
+[linuwu-sense repository](https://github.com/0x7375646F/Linuwu-Sense).** If
+linuwu-sense supports your laptop, SenseCenter will too. If a feature isn't
+exposed by the driver on your model, that control won't be available in SenseCenter.
+
+SenseCenter has been tested on an Acer Predator PHN16-71 (RTX 4050) running Ubuntu 26.04.
 
 ## Building from source
 
@@ -59,3 +72,13 @@ npm install
 npm run tauri dev      # development
 npm run tauri build    # produces .deb / .rpm / .AppImage in src-tauri/target/release/bundle/
 ```
+
+## Contributing
+
+Bug reports and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started, and [CHANGELOG.md](CHANGELOG.md) for release notes.
+
+## License
+
+SenseCenter is licensed under the [GNU General Public License v3.0 or later](LICENSE).
+
+It depends on the [linuwu-sense](https://github.com/0x7375646F/Linuwu-Sense) kernel module, which is licensed separately. SenseCenter contains no linuwu-sense code. It only uses the sysfs interface the module exposes.

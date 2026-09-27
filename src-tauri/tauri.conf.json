@@ -23,6 +23,8 @@
   },
   "bundle": {
     "active": true,
+    "license": "GPL-3.0-or-later",
+    "licenseFile": "../LICENSE",
     "targets": ["deb", "rpm", "appimage"],
     "icon": [
       "icons/32x32.png",
